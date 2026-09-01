@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartMark - Modern Grading System</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- html2pdf Library for Client-side PDF Generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">🎓</div>
+        <div>
+          <h2>SmartMark</h2>
+          <span class="sub-text">Academic Portal</span>
+        </div>
+      </div>
+      <nav class="nav-menu">
+        <button class="nav-btn active" onclick="show('dashboard')"><i>⌂</i> Dashboard</button>
+        <button class="nav-btn" onclick="show('classes')"><i>🏫</i> Classes & Roster</button>
+        <button class="nav-btn" onclick="show('entry')"><i>✎</i> Mark Entry</button>
+        <button class="nav-btn" onclick="show('summary')"><i>◫</i> Grade Analytics</button>
+        <button class="nav-btn" onclick="show('report')"><i>▤</i> Print Reports</button>
+      </nav>
+      <div class="user-profile">
+        <div class="avatar">SU</div>
+        <div class="user-info">
+          <b>Staff User</b>
+          <span>Academic Admin</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- DASHBOARD -->
+      <section id="dashboard" class="content-section">
+        <div class="page-header">
+          <div>
+            <h1>Dashboard</h1>
+            <p class="subtitle">Overview of current classes, tests, and student entries.</p>
+          </div>
+          <button class="btn btn-primary" onclick="show('classes')">+ Manage Roster</button>
+        </div>
+        <div class="stats-grid" id="dashStats"></div>
+        <div class="card card-accent" style="margin-top: 20px;">
+          <h3>Quick Start Guide</h3>
+          <ol class="guide-list">
+            <li>Classes <b>1 through 12</b> are available in the dropdowns.</li>
+            <li>Add students under <b>Classes & Roster</b>.</li>
+            <li>Select <b>Mid Term</b> (Raw Score / Scale) or <b>Term Exam</b> (NBS 5 + SE 5 + T 10 + Custom Exam Mark).</li>
+            <li>Check <b>Grade Analytics</b> to view precise student counts across all 9 grading scales.</li>
+            <li>Generate printable report cards, download PDFs, or export data to CSV.</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- CLASSES & STUDENTS -->
+      <section id="classes" class="content-section hidden">
+        <div class="page-header">
+          <div>
+            <h1>Classes & Roster</h1>
+            <p class="subtitle">Select Class (1-12) or create custom sections.</p>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Select / Create Class Section</h3>
+          <div class="grid-4">
+            <div><label>CLASS</label><select id="classSel" class="input-control"></select></div>
+            <div><label>SECTION</label><select id="sectionSel" class="input-control"></select></div>
+            <div><label>NEW CLASS</label><input id="newClass" class="input-control" placeholder="e.g. 13"></div>
+            <div><label>NEW SECTION</label><input id="newSection" class="input-control" placeholder="e.g. D"></div>
+          </div>
+          <div style="margin-top: 15px;">
+            <button class="btn btn-primary" onclick="addClass()">+ Add Custom Section</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h3 id="studentHeading">Enrolled Students</h3>
+          <div class="grid-3">
+            <div><label>ADMISSION NO.</label><input id="adm" class="input-control" placeholder="ADM-001"></div>
+            <div><label>FULL NAME</label><input id="studentName" class="input-control" placeholder="Student Name"></div>
+            <div style="display:flex; align-items:flex-end;">
+              <button class="btn btn-primary" style="width:100%" onclick="addStudent()">+ Save Student</button>
+            </div>
+          </div>
+          <div class="table-container" style="margin-top: 20px;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-center">S.No</th>
+                  <th class="text-center">Admission No</th>
+                  <th class="text-left">Student Name</th>
+                  <th style="text-align:right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="students"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- MARK ENTRY -->
+      <section id="entry" class="content-section hidden">
+        <div class="page-header">
+          <div>
+            <h1>Mark Entry</h1>
+            <p class="subtitle">Enter exam scores and evaluate results instantly.</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="grid-4">
+            <div><label>CLASS</label><select id="entryClass" class="input-control"></select></div>
+            <div><label>SECTION</label><select id="entrySection" class="input-control"></select></div>
+            <div><label>SUBJECT</label><input id="subject" class="input-control" placeholder="Tamil"></div>
+            <div>
+              <label>EXAM PATTERN</label>
+              <select id="examType" class="input-control" onchange="toggleExamPatternFields()">
+                <option value="midterm">Mid Term</option>
+                <option value="term" selected>Term Exam</option>
+              </select>
+            </div>
+          </div>
+          <div class="grid-4" style="margin-top: 15px;">
+            <div><label>EXAM TITLE</label><input id="examName" class="input-control" placeholder="Term - I"></div>
+            <div>
+              <label id="maxMarkLabel">EXAM MAX MARK (E)</label>
+              <input id="maxMark" type="number" class="input-control" value="80">
+            </div>
+            <div>
+              <label>ACADEMIC YEAR</label>
+              <input id="acadYear" type="text" class="input-control" placeholder="e.g. 2026-27" value="2026-27">
+            </div>
+            <div style="display:flex; align-items:flex-end;">
+              <button class="btn btn-primary" style="width:100%" onclick="loadMarks()">Load Student List</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card hidden" id="markCard" style="margin-top: 20px;">
+          <div class="table-container">
+            <table class="data-table" id="markDataTable">
+              <thead id="markTableHead"></thead>
+              <tbody id="markRows"></tbody>
+            </table>
+          </div>
+          <div class="action-bar">
+            <button class="btn btn-secondary" onclick="clearCurrentMarks()">Reset Marks</button>
+            <button class="btn btn-primary" onclick="saveCurrentMarks()">Save Marks</button>
+            <button class="btn btn-success" onclick="show('summary')">View Grade Analytics →</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- OVERALL ANALYSIS -->
+      <section id="summary" class="content-section hidden">
+        <div class="page-header">
+          <div>
+            <h1>Grade Analytics</h1>
+            <p class="subtitle">Detailed breakdown of counts per grade scale.</p>
+          </div>
+          <button class="btn btn-success no-print" onclick="exportToExcel()">📊 Export CSV</button>
+        </div>
+        <div class="card">
+          <div class="grid-4">
+            <div><label>CLASS</label><select id="sumClass" class="input-control"></select></div>
+            <div><label>SECTION</label><select id="sumSection" class="input-control"></select></div>
+            <div><label>EXAM</label><select id="sumExam" class="input-control"></select></div>
+            <div style="display:flex; align-items:flex-end;">
+              <button class="btn btn-primary" style="width:100%" onclick="renderSummary()">Refresh Data</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid" id="sumStats" style="margin-top: 20px;"></div>
+
+        <div class="grid-2" style="margin-top:20px;">
+          <div class="card">
+            <h3>Grade-Wise Student Count</h3>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="text-center">Grade</th>
+                    <th class="text-center">Mark Range</th>
+                    <th class="text-center">Students Count</th>
+                    <th class="text-center">Percentage</th>
+                  </tr>
+                </thead>
+                <tbody id="gradeRows"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Overall Performance</h3>
+            <div class="table-container">
+              <table class="data-table" id="summaryTable"></table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FINAL REPORT -->
+      <section id="report" class="content-section hidden">
+        <div class="page-header no-print">
+          <div>
+            <h1>Final Report Card</h1>
+            <p class="subtitle">Print-ready consolidated exam statement.</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-secondary" onclick="exportToExcel()">📊 Export CSV</button>
+            <button class="btn btn-primary" onclick="downloadPDF()">📄 Download PDF</button>
+            <button class="btn btn-success" onclick="window.print()">🖨 Print Report</button>
+          </div>
+        </div>
+        <div class="card no-print" style="margin-bottom: 20px;">
+          <div class="grid-4">
+            <div><label>CLASS</label><select id="repClass" class="input-control"></select></div>
+            <div><label>SECTION</label><select id="repSection" class="input-control"></select></div>
+            <div><label>EXAM</label><select id="repExam" class="input-control"></select></div>
+            <div style="display:flex; align-items:flex-end;">
+              <button class="btn btn-primary" style="width:100%" onclick="renderReport()">Generate Preview</button>
+            </div>
+          </div>
+        </div>
+        <div class="report-paper" id="reportPage"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="script.js"></script>
+</body>
+</html>
