@@ -1,4 +1,4 @@
-const STORAGE_KEY = "smartmark_multiclass_v8";
+const STORAGE_KEY = "smartmark_multiclass_v10";
 let data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
 
 // Pre-fill default Classes 1 through 12 with Sections A through G
@@ -54,7 +54,7 @@ function toggleExamPatternFields() {
   }
 }
 
-// Grading Logic: >=35 Pass, <35 Fail, AB gives result AB
+// 9-Point Scale: D (33-40, 4.0), E1 (21-32, 3.0), Minimum pass mark is >= 33
 function calculateGrade(value, maxMark) {
   let valStr = String(value).trim().toUpperCase();
   
@@ -76,7 +76,7 @@ function calculateGrade(value, maxMark) {
   else if (score100 >= 61) { grade = "B2"; gradePoint = "7.0"; }
   else if (score100 >= 51) { grade = "C1"; gradePoint = "6.0"; }
   else if (score100 >= 41) { grade = "C2"; gradePoint = "5.0"; }
-  else if (score100 >= 35) { grade = "D";  gradePoint = "4.0"; }
+  else if (score100 >= 33) { grade = "D";  gradePoint = "4.0"; }
   else if (score100 >= 21) { grade = "E1"; gradePoint = "3.0"; }
   else { grade = "E2"; gradePoint = "2.0"; }
 
@@ -85,7 +85,7 @@ function calculateGrade(value, maxMark) {
 }
 
 function isPassing(score100) {
-  return typeof score100 === "number" && score100 >= 35;
+  return typeof score100 === "number" && score100 >= 33;
 }
 
 function getResultClass(res) {
@@ -277,10 +277,10 @@ function renderMarkEntryTable(examObj) {
         <td class="text-center">${i + 1}</td>
         <td class="text-center">${st.adm}</td>
         <td class="text-left"><b>${st.name}</b></td>
-        <td class="text-center"><input type="number" step="any" min="0" max="5" class="input-control term-input" data-row="${i}" data-col="0" data-id="${st.id}" data-field="nbs" data-max="5" value="${val.nbs ?? ''}" style="width:70px; text-align:center;"></td>
-        <td class="text-center"><input type="number" step="any" min="0" max="5" class="input-control term-input" data-row="${i}" data-col="1" data-id="${st.id}" data-field="se" data-max="5" value="${val.se ?? ''}" style="width:70px; text-align:center;"></td>
-        <td class="text-center"><input type="number" step="any" min="0" max="10" class="input-control term-input" data-row="${i}" data-col="2" data-id="${st.id}" data-field="t" data-max="10" value="${val.t ?? ''}" style="width:70px; text-align:center;"></td>
-        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="3" data-id="${st.id}" data-field="e" data-max="${dynamicExamMax}" value="${val.e ?? ''}" style="width:80px; text-align:center;" placeholder="Mark / AB"></td>
+        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="0" data-id="${st.id}" data-field="nbs" data-max="5" value="${val.nbs ?? ''}" style="width:75px; text-align:center;" placeholder="Mark/AB"></td>
+        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="1" data-id="${st.id}" data-field="se" data-max="5" value="${val.se ?? ''}" style="width:75px; text-align:center;" placeholder="Mark/AB"></td>
+        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="2" data-id="${st.id}" data-field="t" data-max="10" value="${val.t ?? ''}" style="width:75px; text-align:center;" placeholder="Mark/AB"></td>
+        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="3" data-id="${st.id}" data-field="e" data-max="${dynamicExamMax}" value="${val.e ?? ''}" style="width:85px; text-align:center;" placeholder="Mark/AB"></td>
         <td class="text-center"><b>${resData.totalStr}</b></td>
         <td class="text-center"><span class="${badgeClass}">${resData.grade}</span></td>
         <td class="text-center">${resData.gradePoint}</td>
@@ -327,7 +327,7 @@ function renderMarkEntryTable(examObj) {
   }
 }
 
-// Spreadsheet Keyboard Navigation System
+// Spreadsheet Keyboard Navigation (Arrow Keys + Enter + Tab)
 function handleSpreadsheetKeyNav(e, inp, colsPerRow) {
   const row = +inp.dataset.row;
   const col = +(inp.dataset.col || 0);
@@ -405,27 +405,38 @@ function validateAndClampInput(inp, maxOverride) {
   }
 }
 
+// Term Calculation: Sums all entered numeric scores even if Exam or other components are AB
 function calculateTermScore(val, dynamicExamMax) {
-  let eStr = String(val.e ?? "").trim().toUpperCase();
-  if (eStr === "AB") {
-    return { total: "AB", totalStr: "AB", grade: "-", gradePoint: "-", res: "AB" };
-  }
-  if ((val.nbs === "" || val.nbs === undefined) && 
-      (val.se === "" || val.se === undefined) && 
-      (val.t === "" || val.t === undefined) && 
-      (eStr === "" || eStr === undefined)) {
+  const parseVal = (v) => String(v ?? "").trim().toUpperCase();
+  const nbsStr = parseVal(val.nbs);
+  const seStr = parseVal(val.se);
+  const tStr = parseVal(val.t);
+  const eStr = parseVal(val.e);
+
+  const rawEntries = [nbsStr, seStr, tStr, eStr];
+  const filledEntries = rawEntries.filter(v => v !== "");
+
+  if (filledEntries.length === 0) {
     return { total: "", totalStr: "", grade: "", gradePoint: "", res: "" };
   }
 
-  let nbs = +val.nbs || 0;
-  let se = +val.se || 0;
-  let t = +val.t || 0;
-  let e = +eStr || 0;
-  let maxE = +dynamicExamMax || 80;
-  let maxTotal = 20 + maxE;
+  if (filledEntries.every(v => v === "AB")) {
+    return { total: "AB", totalStr: "AB", grade: "-", gradePoint: "-", res: "AB" };
+  }
 
-  let totalRaw = nbs + se + t + e;
-  let [score100, grade, gradePoint, res] = calculateGrade(totalRaw, maxTotal);
+  const getNumericVal = (str) => (str === "" || str === "AB" || isNaN(str)) ? 0 : +str;
+
+  const nbs = getNumericVal(nbsStr);
+  const se = getNumericVal(seStr);
+  const t = getNumericVal(tStr);
+  const e = getNumericVal(eStr);
+
+  const maxE = +dynamicExamMax || 80;
+  const maxTotal = 20 + maxE;
+
+  const totalRaw = nbs + se + t + e;
+  const [score100, grade, gradePoint, res] = calculateGrade(totalRaw, maxTotal);
+
   return { total: score100, totalStr: formatNum(totalRaw), grade, gradePoint, res };
 }
 
@@ -490,9 +501,9 @@ function saveCurrentMarks() {
     let rows = document.querySelectorAll("#markRows tr");
     rows.forEach(row => {
       let id = row.querySelector('[data-field="nbs"]').dataset.id;
-      let nbs = row.querySelector('[data-field="nbs"]').value.trim();
-      let se = row.querySelector('[data-field="se"]').value.trim();
-      let t = row.querySelector('[data-field="t"]').value.trim();
+      let nbs = row.querySelector('[data-field="nbs"]').value.trim().toUpperCase();
+      let se = row.querySelector('[data-field="se"]').value.trim().toUpperCase();
+      let t = row.querySelector('[data-field="t"]').value.trim().toUpperCase();
       let e = row.querySelector('[data-field="e"]').value.trim().toUpperCase();
       examObj.marks[id] = { nbs, se, t, e };
     });
@@ -552,7 +563,7 @@ function calculateStatistics(e) {
     }
   });
 
-  let passCount = numericScores.filter(v => v >= 35).length;
+  let passCount = numericScores.filter(v => v >= 33).length; // Grade D threshold (>= 33)
   let attendedCount = numericScores.length;
 
   return {
@@ -599,8 +610,15 @@ function renderSummary() {
   ].map(x => `<div class="stat-card"><span>${x[0]}</span><b>${x[1]}</b></div>`).join("");
 
   const gradeRanges = {
-    A1: "91 - 100", A2: "81 - 90", B1: "71 - 80", B2: "61 - 70",
-    C1: "51 - 60", C2: "41 - 50", D: "35 - 40", E1: "21 - 34", E2: "00 - 20"
+    A1: "91 - 100", 
+    A2: "81 - 90", 
+    B1: "71 - 80", 
+    B2: "61 - 70",
+    C1: "51 - 60", 
+    C2: "41 - 50", 
+    D:  "33 - 40",
+    E1: "21 - 32",
+    E2: "00 - 20"
   };
 
   document.getElementById("gradeRows").innerHTML = Object.entries(stats.counts).map(([grade, count]) => {

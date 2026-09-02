@@ -200,14 +200,12 @@ label {
   background: #fff;
 }
 
-/* Hide number input spin-buttons for compact entry */
-.term-input::-webkit-outer-spin-button,
-.term-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.term-input[type=number] {
-  -moz-appearance: textfield;
+/* Input Validation Error State */
+.input-control.input-error {
+  border-color: var(--danger-color) !important;
+  background-color: #fef2f2 !important;
+  color: var(--danger-color) !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
 }
 
 .btn {
@@ -328,7 +326,7 @@ label {
 
 .pass-text { color: var(--success-color); font-weight: 700; }
 .fail-text { color: var(--danger-color); font-weight: 700; }
-.ab-text   { color: #e11d48; font-weight: 700; }
+.ab-text   { color: var(--danger-color); font-weight: 700; }
 
 .hidden { display: none; }
 
@@ -365,11 +363,4 @@ label {
   .sidebar, .no-print, .page-header { display: none !important; }
   .main-content { margin: 0; width: 100%; padding: 0; }
   .report-paper { border: none; box-shadow: none; padding: 0; }
-}
-/* Input Validation Error State */
-.input-control.input-error {
-  border-color: var(--danger-color) !important;
-  background-color: #fef2f2 !important;
-  color: var(--danger-color) !important;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
 }
