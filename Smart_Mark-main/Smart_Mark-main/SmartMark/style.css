@@ -260,7 +260,7 @@ label {
   margin-top: 6px;
 }
 
-/* Data Tables with Vertical Lines */
+/* Data Tables */
 .table-container {
   overflow-x: auto;
   border: 1px solid var(--border-color);
@@ -330,13 +330,23 @@ label {
 
 .hidden { display: none; }
 
-/* Report Page */
+/* Report Page Layout (Compact & Clean) */
 .report-paper {
   background: white;
-  padding: 40px;
+  padding: 24px 20px;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   border: 1px solid var(--border-color);
+}
+
+.report-paper .data-table th {
+  padding: 7px 6px;
+  font-size: 12px;
+}
+
+.report-paper .data-table td {
+  padding: 6px 6px;
+  font-size: 12px;
 }
 
 .guide-list {
@@ -358,9 +368,41 @@ label {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
-/* Print Styles */
+/* Print Optimization */
 @media print {
-  .sidebar, .no-print, .page-header { display: none !important; }
-  .main-content { margin: 0; width: 100%; padding: 0; }
-  .report-paper { border: none; box-shadow: none; padding: 0; }
+  @page {
+    margin: 8mm;
+    size: portrait;
+  }
+  
+  body {
+    background: #fff;
+  }
+
+  .sidebar, .no-print, .page-header, .card.no-print, .toast { 
+    display: none !important; 
+  }
+  
+  .main-content { 
+    margin: 0 !important; 
+    width: 100% !important; 
+    padding: 0 !important; 
+  }
+  
+  .report-paper { 
+    border: none !important; 
+    box-shadow: none !important; 
+    padding: 0 !important; 
+  }
+
+  .data-table th, .data-table td {
+    padding: 5px 4px !important;
+    font-size: 11px !important;
+  }
+
+  .data-table th:last-child,
+  .data-table td:last-child {
+    padding-right: 6px !important;
+    white-space: nowrap !important;
+  }
 }

@@ -53,9 +53,9 @@
           <ol class="guide-list">
             <li>Classes <b>1 through 12</b> are available in the dropdowns.</li>
             <li>Add students under <b>Classes & Roster</b>.</li>
-            <li>Select <b>Mid Term</b> (Raw Score / Scale) or <b>Term Exam</b> (NBS 5 + SE 5 + T 10 + Custom Exam Mark).</li>
-            <li>Check <b>Grade Analytics</b> to view precise student counts across all 9 grading scales.</li>
-            <li>Generate printable report cards, download PDFs, or export data to CSV.</li>
+            <li>Select <b>Mid Term</b> or <b>Term Exam</b> pattern with custom Exam Max Marks.</li>
+            <li>Check <b>Grade Analytics</b> to view student performance breakdown.</li>
+            <li>Generate reports and export to <b>CSV</b>, <b>Word (.doc)</b>, <b>PDF</b>, or <b>Print</b>.</li>
           </ol>
         </div>
       </section>
@@ -213,8 +213,9 @@
             <h1>Final Report Card</h1>
             <p class="subtitle">Print-ready consolidated exam statement.</p>
           </div>
-          <div style="display:flex; gap:10px;">
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn btn-secondary" onclick="exportToExcel()">📊 Export CSV</button>
+            <button class="btn btn-primary" style="background:#2b579a;" onclick="exportToWord()">📝 Download Word</button>
             <button class="btn btn-primary" onclick="downloadPDF()">📄 Download PDF</button>
             <button class="btn btn-success" onclick="window.print()">🖨 Print Report</button>
           </div>

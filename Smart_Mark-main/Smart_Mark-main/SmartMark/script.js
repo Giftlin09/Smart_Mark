@@ -1,4 +1,4 @@
-const STORAGE_KEY = "smartmark_multiclass_v10";
+const STORAGE_KEY = "smartmark_multiclass_v12";
 let data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
 
 // Pre-fill default Classes 1 through 12 with Sections A through G
@@ -54,7 +54,7 @@ function toggleExamPatternFields() {
   }
 }
 
-// 9-Point Scale: D (33-40, 4.0), E1 (21-32, 3.0), Minimum pass mark is >= 33
+// 9-Point Scale: >= 35 is Pass (D), <= 34 is Fail (E1, E2), AB gives result AB
 function calculateGrade(value, maxMark) {
   let valStr = String(value).trim().toUpperCase();
   
@@ -76,16 +76,16 @@ function calculateGrade(value, maxMark) {
   else if (score100 >= 61) { grade = "B2"; gradePoint = "7.0"; }
   else if (score100 >= 51) { grade = "C1"; gradePoint = "6.0"; }
   else if (score100 >= 41) { grade = "C2"; gradePoint = "5.0"; }
-  else if (score100 >= 33) { grade = "D";  gradePoint = "4.0"; }
-  else if (score100 >= 21) { grade = "E1"; gradePoint = "3.0"; }
-  else { grade = "E2"; gradePoint = "2.0"; }
+  else if (score100 >= 35) { grade = "D";  gradePoint = "4.0"; } // 35 and above is Pass
+  else if (score100 >= 21) { grade = "E1"; gradePoint = "3.0"; } // 21 to 34 is Fail
+  else { grade = "E2"; gradePoint = "2.0"; }                     // 0 to 20 is Fail
 
   let resultStatus = isPassing(score100) ? "Pass" : "Fail";
   return [score100, grade, gradePoint, resultStatus];
 }
 
 function isPassing(score100) {
-  return typeof score100 === "number" && score100 >= 33;
+  return typeof score100 === "number" && score100 >= 35;
 }
 
 function getResultClass(res) {
@@ -563,7 +563,7 @@ function calculateStatistics(e) {
     }
   });
 
-  let passCount = numericScores.filter(v => v >= 33).length; // Grade D threshold (>= 33)
+  let passCount = numericScores.filter(v => v >= 35).length; // >= 35 is Pass
   let attendedCount = numericScores.length;
 
   return {
@@ -616,9 +616,9 @@ function renderSummary() {
     B2: "61 - 70",
     C1: "51 - 60", 
     C2: "41 - 50", 
-    D:  "33 - 40",
-    E1: "21 - 32",
-    E2: "00 - 20"
+    D:  "35 - 40", 
+    E1: "21 - 34", 
+    E2: "00 - 20"  
   };
 
   document.getElementById("gradeRows").innerHTML = Object.entries(stats.counts).map(([grade, count]) => {
@@ -661,17 +661,17 @@ function renderReport() {
     tableHeaderHtml = `
       <thead>
         <tr>
-          <th class="text-center">S.No</th>
-          <th class="text-center">Adm No</th>
+          <th class="text-center" style="width: 45px;">S.No</th>
+          <th class="text-center" style="width: 75px;">Adm No</th>
           <th class="text-left">Name</th>
-          <th class="text-center">NBS (5)</th>
-          <th class="text-center">SE (5)</th>
-          <th class="text-center">T (10)</th>
-          <th class="text-center">Exam (${examMax})</th>
-          <th class="text-center">Total (${totalMax})</th>
-          <th class="text-center">Grade</th>
-          <th class="text-center">Grade Point</th>
-          <th class="text-center">Result</th>
+          <th class="text-center" style="width: 60px;">NBS (5)</th>
+          <th class="text-center" style="width: 60px;">SE (5)</th>
+          <th class="text-center" style="width: 60px;">T (10)</th>
+          <th class="text-center" style="width: 75px;">Exam (${examMax})</th>
+          <th class="text-center" style="width: 75px;">Total (${totalMax})</th>
+          <th class="text-center" style="width: 60px;">Grade</th>
+          <th class="text-center" style="width: 75px;">Grade Pt</th>
+          <th class="text-center" style="width: 70px;">Result</th>
         </tr>
       </thead>`;
 
@@ -700,14 +700,14 @@ function renderReport() {
     tableHeaderHtml = `
       <thead>
         <tr>
-          <th class="text-center">S.No</th>
-          <th class="text-center">Adm No</th>
+          <th class="text-center" style="width: 50px;">S.No</th>
+          <th class="text-center" style="width: 90px;">Adm No</th>
           <th class="text-left">Name</th>
-          <th class="text-center">Obtained Mark</th>
-          <th class="text-center">Mark (100)</th>
-          <th class="text-center">Grade</th>
-          <th class="text-center">Grade Point</th>
-          <th class="text-center">Result</th>
+          <th class="text-center" style="width: 100px;">Obtained Mark</th>
+          <th class="text-center" style="width: 100px;">Mark (100)</th>
+          <th class="text-center" style="width: 70px;">Grade</th>
+          <th class="text-center" style="width: 80px;">Grade Point</th>
+          <th class="text-center" style="width: 80px;">Result</th>
         </tr>
       </thead>`;
 
@@ -733,26 +733,28 @@ function renderReport() {
   let stats = calculateStatistics(examObj);
   
   document.getElementById("reportPage").innerHTML = `
-    <div style="text-align:center; margin-bottom:20px; font-weight: 700; font-size: 16px; color: var(--text-main);">
+    <!-- Header with minimized vertical gap -->
+    <div style="text-align:center; margin-bottom:12px; font-weight:700; font-size:15px; color:var(--text-main);">
       Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject}) [${isTerm ? 'Term Pattern' : 'Mid Term Pattern'}]
     </div>
     
-    <table class="data-table">
+    <table class="data-table print-table">
       ${tableHeaderHtml}
       <tbody>${rowsHtml}</tbody>
     </table>
     
-    <div style="margin-top:24px; font-size:13px; line-height:1.8;">
+    <!-- Footer with labels only in bold, numbers in regular font -->
+    <div style="margin-top:14px; font-size:12px; line-height:1.6;">
       <div>
-        <b>Class Metrics:</b> 
-        <b>Total Enrolled: ${stats.totalStudents}</b> | 
-        <b>Average: ${stats.average}%</b> | 
-        <b>Passed: ${stats.passed}</b> | 
-        <b>Absent: ${stats.absentCount}</b> | 
-        <b>Pass Rate (Attended): ${stats.passRate}%</b>
+        <b>Class Metrics:</b> &nbsp;
+        <b>Total Enrolled:</b> ${stats.totalStudents} &nbsp;|&nbsp; 
+        <b>Average:</b> ${stats.average}% &nbsp;|&nbsp; 
+        <b>Passed:</b> ${stats.passed} &nbsp;|&nbsp; 
+        <b>Absent:</b> ${stats.absentCount} &nbsp;|&nbsp; 
+        <b>Pass Rate (Attended):</b> ${stats.passRate}%
       </div>
-      <div style="margin-top: 10px;">
-        <b>Grade Counts:</b> ${Object.entries(stats.counts).map(x => `<b>${x[0]}:</b> ${x[1]}`).join(" &nbsp;|&nbsp; ")}
+      <div style="margin-top:6px;">
+        <b>Grade Counts:</b> &nbsp;${Object.entries(stats.counts).map(([gr, count]) => `<b>${gr}:</b> ${count}`).join(" &nbsp;|&nbsp; ")}
       </div>
     </div>
   `;
@@ -763,14 +765,59 @@ function downloadPDF() {
   if (!element) return alert("No report available to download.");
 
   const opt = {
-    margin:       0.5,
+    margin:       [0.3, 0.3, 0.3, 0.3],
     filename:     `Academic_Report_Class_${current.class}${current.section}.pdf`,
     image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2 },
+    html2canvas:  { scale: 2, useCORS: true },
     jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
   };
 
   html2pdf().set(opt).from(element).save();
+}
+
+// Client-Side Microsoft Word (.doc) Generation
+function exportToWord() {
+  const content = document.getElementById('reportPage');
+  if (!content || !content.innerHTML.trim()) {
+    return alert("Please generate the report preview first.");
+  }
+
+  const htmlContent = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+          xmlns:w='urn:schemas-microsoft-com:office:word' 
+          xmlns='http://www.w3.org/TR/REC-html40'>
+    <head>
+      <meta charset='utf-8'>
+      <title>Academic Report</title>
+      <style>
+        body { font-family: 'Calibri', Arial, sans-serif; font-size: 11pt; }
+        table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        th { background-color: #f1f5f9; font-weight: bold; border: 1px solid #94a3b8; padding: 6px; font-size: 10pt; text-align: center; }
+        td { border: 1px solid #cbd5e1; padding: 5px; font-size: 10pt; }
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .pass-text { color: #10b981; font-weight: bold; }
+        .fail-text, .ab-text { color: #ef4444; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      ${content.innerHTML}
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob(['\ufeff' + htmlContent], {
+    type: 'application/msword'
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `Academic_Report_Class_${current.class}${current.section}.doc`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 function exportToExcel() {
