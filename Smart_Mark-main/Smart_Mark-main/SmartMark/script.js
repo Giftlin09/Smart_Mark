@@ -76,7 +76,7 @@ function calculateGrade(value, maxMark) {
   else if (score100 >= 61) { grade = "B2"; gradePoint = "7.0"; }
   else if (score100 >= 51) { grade = "C1"; gradePoint = "6.0"; }
   else if (score100 >= 41) { grade = "C2"; gradePoint = "5.0"; }
-  else if (score100 >= 35) { grade = "D";  gradePoint = "4.0"; } // 35 and above is Pass
+  else if (score100 >= 33) { grade = "D";  gradePoint = "4.0"; } // 35 and above is Pass
   else if (score100 >= 21) { grade = "E1"; gradePoint = "3.0"; } // 21 to 34 is Fail
   else { grade = "E2"; gradePoint = "2.0"; }                     // 0 to 20 is Fail
 
