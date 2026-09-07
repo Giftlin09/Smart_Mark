@@ -54,8 +54,8 @@
             <li>Classes <b>1 through 12</b> are available in the dropdowns.</li>
             <li>Add students under <b>Classes & Roster</b>.</li>
             <li>Select <b>Mid Term</b> or <b>Term Exam</b> pattern with custom Exam Max Marks.</li>
-            <li>Check <b>Grade Analytics</b> to view student performance breakdown.</li>
-            <li>Generate reports and export to <b>CSV</b>, <b>Word (.doc)</b>, <b>PDF</b>, or <b>Print</b>.</li>
+            <li>Check <b>Grade Analytics</b> to view precise performance distribution across all 9 scales.</li>
+            <li>Generate consolidated reports and export to <b>CSV</b>, <b>Word (.doc)</b>, <b>PDF</b>, or <b>Print</b>.</li>
           </ol>
         </div>
       </section>
@@ -83,21 +83,22 @@
 
         <div class="card" style="margin-top: 20px;">
           <h3 id="studentHeading">Enrolled Students</h3>
-          <div class="grid-3">
-            <div><label>ADMISSION NO.</label><input id="adm" class="input-control" placeholder="ADM-001"></div>
-            <div><label>FULL NAME</label><input id="studentName" class="input-control" placeholder="Student Name"></div>
+          <div style="display: flex; gap: 15px;">
+            <div style="flex: 1;">
+              <label>FULL STUDENT NAME</label>
+              <input id="studentName" class="input-control" placeholder="Enter student full name">
+            </div>
             <div style="display:flex; align-items:flex-end;">
-              <button class="btn btn-primary" style="width:100%" onclick="addStudent()">+ Save Student</button>
+              <button class="btn btn-primary" style="padding: 10px 24px;" onclick="addStudent()">+ Save Student</button>
             </div>
           </div>
           <div class="table-container" style="margin-top: 20px;">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th class="text-center">S.No</th>
-                  <th class="text-center">Admission No</th>
+                  <th class="text-center" style="width: 70px;">S.No</th>
                   <th class="text-left">Student Name</th>
-                  <th style="text-align:right;">Action</th>
+                  <th style="text-align:right; width: 120px;">Action</th>
                 </tr>
               </thead>
               <tbody id="students"></tbody>
