@@ -1,4 +1,4 @@
-const STORAGE_KEY = "smartmark_multiclass_v14";
+const STORAGE_KEY = "smartmark_multiclass_v16";
 let data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
 
 // Pre-fill default Classes 1 through 12 with Sections A through G
@@ -54,7 +54,7 @@ function toggleExamPatternFields() {
   }
 }
 
-// 9-Point Scale: D (33-40, 4.0, Pass), E1 (21-32, 3.0, Fail), E2 (0-20, 2.0, Fail)
+// 9-Point Scale: D (33-40, 4.0), E1 (21-32, 3.0), E2 (0-20, 2.0). Pass condition: >= 35
 function calculateGrade(value, maxMark) {
   let valStr = String(value).trim().toUpperCase();
   
@@ -76,17 +76,17 @@ function calculateGrade(value, maxMark) {
   else if (score100 >= 61) { grade = "B2"; gradePoint = "7.0"; }
   else if (score100 >= 51) { grade = "C1"; gradePoint = "6.0"; }
   else if (score100 >= 41) { grade = "C2"; gradePoint = "5.0"; }
-  else if (score100 >= 33) { grade = "D";  gradePoint = "4.0"; } // 33 to 40 (Pass)
-  else if (score100 >= 21) { grade = "E1"; gradePoint = "3.0"; } // 21 to 32 (Fail)
-  else { grade = "E2"; gradePoint = "2.0"; }                     // 0 to 20 (Fail)
+  else if (score100 >= 33) { grade = "D";  gradePoint = "4.0"; } // 33 to 40 (Grade D)
+  else if (score100 >= 21) { grade = "E1"; gradePoint = "3.0"; } // 21 to 32 (Grade E1)
+  else { grade = "E2"; gradePoint = "2.0"; }                     // 0 to 20 (Grade E2)
 
   let resultStatus = isPassing(score100) ? "Pass" : "Fail";
   return [score100, grade, gradePoint, resultStatus];
 }
 
-// Pass threshold strictly >= 33
+// Pass criterion strictly >= 35
 function isPassing(score100) {
-  return typeof score100 === "number" && score100 >= 33;
+  return typeof score100 === "number" && score100 >= 35;
 }
 
 function getResultClass(res) {
@@ -322,7 +322,7 @@ function renderMarkEntryTable(examObj) {
   }
 }
 
-// Spreadsheet Keyboard Navigation (Arrow Keys + Enter + Tab)
+// Spreadsheet Keyboard Navigation
 function handleSpreadsheetKeyNav(e, inp, colsPerRow) {
   const row = +inp.dataset.row;
   const col = +(inp.dataset.col || 0);
@@ -557,7 +557,7 @@ function calculateStatistics(e) {
     }
   });
 
-  let passCount = numericScores.filter(v => v >= 33).length; // Aligned to >= 33 (Pass)
+  let passCount = numericScores.filter(v => v >= 35).length; // Pass is >= 35
   let attendedCount = numericScores.length;
 
   return {
@@ -610,9 +610,9 @@ function renderSummary() {
     B2: "61 - 70",
     C1: "51 - 60", 
     C2: "41 - 50", 
-    D:  "33 - 40", // 33 to 40 (Pass)
-    E1: "21 - 32", // 21 to 32 (Fail)
-    E2: "00 - 20"  // 00 to 20 (Fail)
+    D:  "33 - 40", 
+    E1: "21 - 32", 
+    E2: "00 - 20"  
   };
 
   document.getElementById("gradeRows").innerHTML = Object.entries(stats.counts).map(([grade, count]) => {
@@ -723,12 +723,12 @@ function renderReport() {
   let stats = calculateStatistics(examObj);
   
   document.getElementById("reportPage").innerHTML = `
-    <!-- School Header with reduced CBSE font size -->
+    <!-- School Header -->
     <div style="text-align:center; margin-bottom:4px; font-weight:800; font-size:18px; color:var(--text-main); letter-spacing:0.5px;">
       PEARLS PUBLIC SCHOOL <span style="font-size:13px; font-weight:600;">(CBSE)</span>
     </div>
 
-    <!-- Exam Sub-Header with minimized vertical gap -->
+    <!-- Exam Sub-Header -->
     <div style="text-align:center; margin-bottom:12px; font-weight:700; font-size:14px; color:var(--text-muted);">
       Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject}) [${isTerm ? 'Term Pattern' : 'Mid Term Pattern'}]
     </div>
@@ -770,7 +770,69 @@ function downloadPDF() {
   html2pdf().set(opt).from(element).save();
 }
 
-// Client-Side Microsoft Word (.doc) Generation with School Title Header
+// Native Apple Pages (.rtf) Export
+function exportToPages() {
+  const examObj = data.exams[current.exam];
+  if (!examObj) return alert("Select or generate an exam preview first.");
+
+  const students = getClassObj().students;
+  const isTerm = examObj.pattern === "term";
+  const examMax = +examObj.max || 80;
+  const stats = calculateStatistics(examObj);
+
+  let rtf = "{\\rtf1\\ansi\\deff0\n";
+  rtf += "{\\fonttbl{\\f0 Arial;}}\n";
+  rtf += "{\\colortbl ;\\red0\\green128\\blue0;\\red220\\green38\\blue38;}\n"; // Green, Red
+  rtf += "\\viewkind4\\uc1\\pard\\qc\\b\\fs32 PEARLS PUBLIC SCHOOL \\fs22 (CBSE)\\par\\b0\n";
+  rtf += `\\fs20 Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject})\\par\\par\n`;
+
+  // RTF Table Headers
+  rtf += "\\trowd\\trgaph70\\cellx800\\cellx3600";
+  if (isTerm) {
+    rtf += "\\cellx4500\\cellx5400\\cellx6300\\cellx7400\\cellx8400\\cellx9300\\cellx10200\\cellx11200\n";
+    rtf += "\\intbl\\b S.No\\cell Student Name\\cell NBS (5)\\cell SE (5)\\cell T (10)\\cell Exam (" + examMax + ")\\cell Total\\cell Grade\\cell Grade Pt\\cell Result\\cell\\row\\b0\n";
+  } else {
+    rtf += "\\cellx5200\\cellx6700\\cellx7800\\cellx8900\\cellx10200\n";
+    rtf += "\\intbl\\b S.No\\cell Student Name\\cell Obtained Mark\\cell Mark (100)\\cell Grade\\cell Grade Pt\\cell Result\\cell\\row\\b0\n";
+  }
+
+  // Rows
+  students.forEach((s, i) => {
+    let val = examObj.marks[s.id] ?? "";
+    if (isTerm) {
+      if (typeof val !== "object") val = { nbs: "", se: "", t: "", e: val };
+      let resData = calculateTermScore(val, examMax);
+      let resColor = resData.res === "Pass" ? "\\cf1" : "\\cf2";
+
+      rtf += "\\trowd\\trgaph70\\cellx800\\cellx3600\\cellx4500\\cellx5400\\cellx6300\\cellx7400\\cellx8400\\cellx9300\\cellx10200\\cellx11200\n";
+      rtf += `\\intbl ${i + 1}\\cell ${s.name}\\cell ${val.nbs || '-'}\\cell ${val.se || '-'}\\cell ${val.t || '-'}\\cell ${val.e || '-'}\\cell ${resData.totalStr}\\cell ${resData.grade}\\cell ${resData.gradePoint}\\cell ${resColor}\\b ${resData.res}\\b0\\cf0\\cell\\row\n`;
+    } else {
+      let [score100, grade, gradePoint, res] = calculateGrade(val, examObj.max);
+      let convertedText = score100 === "AB" ? "AB" : (score100 === "" ? "" : formatNum(score100));
+      let resColor = res === "Pass" ? "\\cf1" : "\\cf2";
+
+      rtf += "\\trowd\\trgaph70\\cellx800\\cellx3600\\cellx5200\\cellx6700\\cellx7800\\cellx8900\\cellx10200\n";
+      rtf += `\\intbl ${i + 1}\\cell ${s.name}\\cell ${val}\\cell ${convertedText}\\cell ${grade}\\cell ${gradePoint}\\cell ${resColor}\\b ${res}\\b0\\cf0\\cell\\row\n`;
+    }
+  });
+
+  // Footer summary
+  rtf += `\\pard\\sa100\\par\\b Class Metrics:\\b0  Total Enrolled: ${stats.totalStudents} | Average: ${stats.average}% | Passed: ${stats.passed} | Absent: ${stats.absentCount} | Pass Rate: ${stats.passRate}%\\par\n`;
+  rtf += `\\b Grade Counts:\\b0  ${Object.entries(stats.counts).map(([gr, count]) => `${gr}: ${count}`).join(" | ")}\\par\n`;
+  rtf += "}";
+
+  const blob = new Blob([rtf], { type: "application/rtf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Report_Class_${examObj.className}${examObj.section}_${examObj.name}.rtf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// Client-Side Microsoft Word (.doc) Generation with 4-Sided Frame
 function exportToWord() {
   const content = document.getElementById('reportPage');
   if (!content || !content.innerHTML.trim()) {
@@ -786,9 +848,10 @@ function exportToWord() {
       <title>Academic Report</title>
       <style>
         body { font-family: 'Calibri', Arial, sans-serif; font-size: 11pt; }
+        .word-frame { border: 2px solid #000; padding: 15px; }
         table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-        th { background-color: #f1f5f9; font-weight: bold; border: 1px solid #94a3b8; padding: 6px; font-size: 10pt; text-align: center; }
-        td { border: 1px solid #cbd5e1; padding: 5px; font-size: 10pt; }
+        th { background-color: #f1f5f9; font-weight: bold; border: 1px solid #000; padding: 6px; font-size: 10pt; text-align: center; }
+        td { border: 1px solid #000; padding: 5px; font-size: 10pt; }
         .text-center { text-align: center; }
         .text-left { text-align: left; }
         .pass-text { color: #10b981; font-weight: bold; }
@@ -796,15 +859,14 @@ function exportToWord() {
       </style>
     </head>
     <body>
-      ${content.innerHTML}
+      <div class="word-frame">
+        ${content.innerHTML}
+      </div>
     </body>
     </html>
   `;
 
-  const blob = new Blob(['\ufeff' + htmlContent], {
-    type: 'application/msword'
-  });
-
+  const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

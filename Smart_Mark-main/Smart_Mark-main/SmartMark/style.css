@@ -330,23 +330,42 @@ label {
 
 .hidden { display: none; }
 
-/* Report Page Layout (Compact & Clean) */
+/* Report Paper - With Full 4-Sided Frame */
 .report-paper {
   background: white;
   padding: 24px 20px;
-  border-radius: var(--radius);
+  border-radius: 4px;
   box-shadow: var(--shadow);
-  border: 1px solid var(--border-color);
+  border: 2px solid #0f172a; /* 4-sided outer frame */
+}
+
+/* Full Borders on Table Cells */
+.report-paper .data-table {
+  border: 1px solid #334155;
 }
 
 .report-paper .data-table th {
   padding: 7px 6px;
   font-size: 12px;
+  border-bottom: 1px solid #334155;
+  border-right: 1px solid #334155;
+  background-color: #f1f5f9;
 }
 
 .report-paper .data-table td {
   padding: 6px 6px;
   font-size: 12px;
+  border-bottom: 1px solid #cbd5e1;
+  border-right: 1px solid #cbd5e1;
+}
+
+.report-paper .data-table th:last-child,
+.report-paper .data-table td:last-child {
+  border-right: none;
+}
+
+.report-paper .data-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .guide-list {
@@ -368,7 +387,7 @@ label {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
-/* Print Optimization */
+/* Print Optimization with 4-Side Borders */
 @media print {
   @page {
     margin: 8mm;
@@ -390,18 +409,26 @@ label {
   }
   
   .report-paper { 
-    border: none !important; 
+    border: 2px solid #000 !important; /* Outer 4-sided frame for print */
     box-shadow: none !important; 
-    padding: 0 !important; 
+    padding: 18px 16px !important; 
+    border-radius: 0 !important;
+  }
+
+  .data-table {
+    border: 1px solid #000 !important;
   }
 
   .data-table th, .data-table td {
     padding: 5px 4px !important;
     font-size: 11px !important;
+    border-bottom: 1px solid #000 !important;
+    border-right: 1px solid #000 !important;
   }
 
   .data-table th:last-child,
   .data-table td:last-child {
+    border-right: none !important;
     padding-right: 6px !important;
     white-space: nowrap !important;
   }

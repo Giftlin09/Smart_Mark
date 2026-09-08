@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SmartMark - Modern Grading System</title>
   <link rel="stylesheet" href="style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- html2pdf Library for Client-side PDF Generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -55,7 +55,7 @@
             <li>Add students under <b>Classes & Roster</b>.</li>
             <li>Select <b>Mid Term</b> or <b>Term Exam</b> pattern with custom Exam Max Marks.</li>
             <li>Check <b>Grade Analytics</b> to view precise performance distribution across all 9 scales.</li>
-            <li>Generate consolidated reports and export to <b>CSV</b>, <b>Word (.doc)</b>, <b>PDF</b>, or <b>Print</b>.</li>
+            <li>Generate consolidated reports and export to <b>CSV</b>, <b>Word (.doc)</b>, <b>Apple Pages (.rtf)</b>, <b>PDF</b>, or <b>Print</b>.</li>
           </ol>
         </div>
       </section>
@@ -217,6 +217,7 @@
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn btn-secondary" onclick="exportToExcel()">📊 Export CSV</button>
             <button class="btn btn-primary" style="background:#2b579a;" onclick="exportToWord()">📝 Download Word</button>
+            <button class="btn btn-primary" style="background:#ea580c;" onclick="exportToPages()">🍎 Open in Pages</button>
             <button class="btn btn-primary" onclick="downloadPDF()">📄 Download PDF</button>
             <button class="btn btn-success" onclick="window.print()">🖨 Print Report</button>
           </div>
