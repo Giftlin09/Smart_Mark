@@ -31,6 +31,7 @@
         <button class="nav-btn active" onclick="show('dashboard')"><i>⌂</i> Dashboard</button>
         <button class="nav-btn" onclick="show('classes')"><i>🏫</i> Classes & Roster</button>
         <button class="nav-btn" onclick="show('entry')"><i>✎</i> Mark Entry</button>
+        <button class="nav-btn" onclick="show('consolidated')"><i>📑</i> Consolidated Sheet</button>
         <button class="nav-btn" onclick="show('summary')"><i>◫</i> Grade Analytics</button>
         <button class="nav-btn" onclick="show('report')"><i>▤</i> Print Reports</button>
       </nav>
@@ -61,9 +62,9 @@
             <li>Classes <b>1 through 12</b> are available in the dropdowns.</li>
             <li>Add students manually or import via <b>CSV</b> and <b>PDF</b> with <b>Admission Numbers</b>.</li>
             <li>Click <b>Edit</b> to update a student's name or admission number directly in the roster table.</li>
-            <li>Select <b>Mid Term</b> or <b>Term Exam</b> pattern with custom Exam Max Marks.</li>
+            <li>Enter marks for each subject in <b>Mark Entry</b>. All subjects for an exam automatically appear side-by-side in the <b>Consolidated Sheet</b>.</li>
             <li>Check <b>Grade Analytics</b> to view precise performance distribution across all 9 scales.</li>
-            <li>Generate consolidated reports with admission details and export to <b>CSV</b>, <b>Word (.doc)</b>, <b>Apple Pages (.rtf)</b>, <b>PDF</b>, or <b>Print</b>.</li>
+            <li>Generate reports and export to <b>CSV</b>, <b>Word (.doc)</b>, <b>Apple Pages (.rtf)</b>, <b>PDF</b>, or <b>Print</b>.</li>
           </ol>
         </div>
       </section>
@@ -101,7 +102,6 @@
             </div>
           </div>
 
-          <!-- Add Student Form -->
           <div style="display: grid; grid-template-columns: 200px 1fr auto; gap: 15px; margin-top: 16px;">
             <div>
               <label>ADMISSION NO.</label>
@@ -144,7 +144,7 @@
           <div class="grid-4">
             <div><label>CLASS</label><select id="entryClass" class="input-control"></select></div>
             <div><label>SECTION</label><select id="entrySection" class="input-control"></select></div>
-            <div><label>SUBJECT</label><input id="subject" class="input-control" placeholder="Tamil"></div>
+            <div><label>SUBJECT</label><input id="subject" class="input-control" placeholder="e.g. Zoology"></div>
             <div>
               <label>EXAM PATTERN</label>
               <select id="examType" class="input-control" onchange="toggleExamPatternFields()">
@@ -154,7 +154,7 @@
             </div>
           </div>
           <div class="grid-4" style="margin-top: 15px;">
-            <div><label>EXAM TITLE</label><input id="examName" class="input-control" placeholder="Term - I"></div>
+            <div><label>EXAM TITLE</label><input id="examName" class="input-control" placeholder="e.g. Term - I"></div>
             <div>
               <label id="maxMarkLabel">EXAM MAX MARK (E)</label>
               <input id="maxMark" type="number" class="input-control" value="80">
@@ -179,8 +179,59 @@
           <div class="action-bar">
             <button class="btn btn-secondary" onclick="clearCurrentMarks()">Reset Marks</button>
             <button class="btn btn-primary" onclick="saveCurrentMarks()">Save Marks</button>
-            <button class="btn btn-success" onclick="show('summary')">View Grade Analytics →</button>
+            <button class="btn btn-success" onclick="show('consolidated')">View Consolidated Sheet →</button>
           </div>
+        </div>
+      </section>
+
+      <!-- CONSOLIDATED MARKSHEET -->
+      <section id="consolidated" class="content-section hidden">
+        <!-- School Header -->
+        <div style="text-align:center; margin-bottom: 18px;">
+          <div style="font-weight:800; font-size:22px; color:#1e293b; letter-spacing:0.5px;">
+            PEARLS PUBLIC SCHOOL <span style="font-size:15px; font-weight:700; color:#3b82f6;">(CBSE)</span>
+          </div>
+          <div id="conSchoolSubHeader" style="margin-top:5px; font-weight:700; font-size:14px; color:#475569;">
+            Class 7-B | Academic Year: 2026-27 | Exam: Term - I [Consolidated]
+          </div>
+        </div>
+
+        <!-- Filter Control Bar -->
+        <div class="card no-print" style="padding: 16px 20px; margin-bottom: 20px;">
+          <div style="display:grid; grid-template-columns: 140px 140px 240px 1fr auto auto; gap: 14px; align-items: flex-end;">
+            <div>
+              <label>Class / Grade:</label>
+              <select id="conClass" class="input-control" onchange="onConFilterChange()"></select>
+            </div>
+            <div>
+              <label>Section:</label>
+              <select id="conSection" class="input-control" onchange="onConFilterChange()"></select>
+            </div>
+            <div>
+              <label>📄 Mode / Teacher Copy:</label>
+              <select id="conMode" class="input-control" style="font-weight:600; color:#1e3a8a;">
+                <option value="consolidated" selected>Consolidated (All Subjects)</option>
+              </select>
+            </div>
+            <div>
+              <label>Examination Name:</label>
+              <select id="conExamSel" class="input-control" onchange="renderConsolidatedSheet()"></select>
+            </div>
+            <div>
+              <button class="btn btn-success" onclick="exportConsolidatedCSV()">📊 Export CSV</button>
+            </div>
+            <div>
+              <button class="btn btn-success" style="background:#059669;" onclick="window.print()">🖨 Print Single Page</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Consolidated Register Table -->
+        <div class="table-container" style="border-radius: 6px; overflow-x: auto;">
+          <table class="data-table con-table" id="conTable">
+            <thead id="conTableHead"></thead>
+            <tbody id="conTableBody"></tbody>
+          </table>
         </div>
       </section>
 

@@ -209,16 +209,17 @@ label {
 }
 
 .btn {
-  padding: 10px 18px;
-  border-radius: 8px;
+  padding: 9px 16px;
+  border-radius: 7px;
   border: none;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 5px;
 }
 
 .btn-primary { background: var(--primary-color); color: #fff; }
@@ -269,18 +270,19 @@ label {
   overflow-x: auto;
   border: 1px solid var(--border-color);
   border-radius: 8px;
+  background: #fff;
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .data-table th {
   background-color: #f8fafc;
-  padding: 12px 14px;
+  padding: 10px 12px;
   font-weight: 600;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border-color);
@@ -288,7 +290,7 @@ label {
 }
 
 .data-table td {
-  padding: 10px 12px;
+  padding: 9px 12px;
   border-bottom: 1px solid var(--border-color);
   border-right: 1px solid var(--border-color);
   vertical-align: middle;
@@ -311,11 +313,23 @@ label {
   text-align: left;
 }
 
-/* Inline Edit Field in Student Table */
-.edit-box {
-  display: flex;
-  gap: 8px;
-  align-items: center;
+/* Consolidated Dark Header Layout */
+.con-table thead tr.con-head-dark th {
+  background-color: #0b192c;
+  color: #f8fafc;
+  font-weight: 700;
+  font-size: 12px;
+  border-color: #1e293b;
+  letter-spacing: 0.3px;
+}
+
+.con-table thead tr.con-head-sub th {
+  background-color: #1e293b;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  border-color: #334155;
+  padding: 6px 8px;
 }
 
 /* Grade Badges */
@@ -342,7 +356,7 @@ label {
 
 .hidden { display: none !important; }
 
-/* Report Paper - With Full 4-Sided Frame */
+/* Report Paper */
 .report-paper {
   background: white;
   padding: 24px 20px;
@@ -399,11 +413,11 @@ label {
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
-/* Print Optimization with 4-Side Borders */
+/* Print Optimization */
 @media print {
   @page {
     margin: 8mm;
-    size: portrait;
+    size: landscape;
   }
   
   body {
@@ -419,29 +433,25 @@ label {
     width: 100% !important; 
     padding: 0 !important; 
   }
-  
-  .report-paper { 
-    border: 2px solid #000 !important;
-    box-shadow: none !important; 
-    padding: 18px 16px !important; 
-    border-radius: 0 !important;
+
+  .con-table {
+    border: 1.5px solid #000 !important;
   }
 
-  .data-table {
+  .con-table th, .con-table td {
     border: 1px solid #000 !important;
+    padding: 5px !important;
+    font-size: 10px !important;
+    color: #000 !important;
   }
 
-  .data-table th, .data-table td {
-    padding: 5px 4px !important;
-    font-size: 11px !important;
-    border-bottom: 1px solid #000 !important;
-    border-right: 1px solid #000 !important;
+  .con-table thead tr.con-head-dark th {
+    background-color: #f1f5f9 !important;
+    color: #000 !important;
   }
 
-  .data-table th:last-child,
-  .data-table td:last-child {
-    border-right: none !important;
-    padding-right: 6px !important;
-    white-space: nowrap !important;
+  .con-table thead tr.con-head-sub th {
+    background-color: #e2e8f0 !important;
+    color: #000 !important;
   }
 }

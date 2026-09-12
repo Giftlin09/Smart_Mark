@@ -14,7 +14,7 @@ if (!data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-let current = { class: "1", section: "A", exam: "", year: "2026-27" };
+let current = { class: "7", section: "B", exam: "", year: "2026-27" };
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -31,14 +31,22 @@ function toast(msg, isError = false) {
 
 function getKey(c, s) { return `${c}|${s}`; }
 
-function getClassObj() {
-  return data.classes[getKey(current.class, current.section)] || { className: current.class, section: current.section, students: [] };
+function getClassObj(c = current.class, s = current.section) {
+  let k = getKey(c, s);
+  if (!data.classes[k]) {
+    data.classes[k] = { className: `${c}`, section: s, students: [] };
+  }
+  return data.classes[k];
 }
 
 function formatNum(val) {
   if (val === "" || val === null || val === undefined || isNaN(val)) return val;
   let num = Number(val);
-  return Number.isInteger(num) ? num.toString() : num.toFixed(2);
+  return Number.isInteger(num) ? num.toString() : num.toFixed(0);
+}
+
+function escapeHtml(str) {
+  return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function toggleExamPatternFields() {
@@ -59,13 +67,8 @@ function toggleExamPatternFields() {
 function calculateGrade(value, maxMark) {
   let valStr = String(value).trim().toUpperCase();
   
-  if (valStr === "AB") {
-    return ["AB", "-", "-", "AB"];
-  }
-
-  if (valStr === "" || isNaN(valStr) || maxMark <= 0) {
-    return ["", "", "", ""];
-  }
+  if (valStr === "AB") return ["AB", "-", "-", "AB"];
+  if (valStr === "" || isNaN(valStr) || maxMark <= 0) return ["", "", "", ""];
 
   let numVal = +valStr;
   let score100 = Math.max(0, Math.min(maxMark, numVal)) * 100 / maxMark;
@@ -81,12 +84,8 @@ function calculateGrade(value, maxMark) {
   else if (score100 >= 21) { grade = "E1"; gradePoint = "3.0"; }
   else { grade = "E2"; gradePoint = "2.0"; }
 
-  let resultStatus = isPassing(score100) ? "Pass" : "Fail";
+  let resultStatus = score100 >= 35 ? "Pass" : "Fail";
   return [score100, grade, gradePoint, resultStatus];
-}
-
-function isPassing(score100) {
-  return typeof score100 === "number" && score100 >= 35;
 }
 
 function getResultClass(res) {
@@ -99,10 +98,20 @@ function getResultClass(res) {
 function show(sectionId) {
   document.querySelectorAll(".content-section").forEach(s => s.classList.add("hidden"));
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById(sectionId).classList.remove("hidden");
   
+  const target = document.getElementById(sectionId);
+  if (target) target.classList.remove("hidden");
+
+  const btns = document.querySelectorAll(".nav-menu .nav-btn");
+  btns.forEach(btn => {
+    if (btn.getAttribute("onclick") && btn.getAttribute("onclick").includes(sectionId)) {
+      btn.classList.add("active");
+    }
+  });
+
   if (sectionId === "dashboard") dashboard();
   if (sectionId === "classes") renderClasses();
+  if (sectionId === "consolidated") { populateDropdowns(); renderConsolidatedSheet(); }
   if (sectionId === "summary") { populateDropdowns(); renderSummary(); }
   if (sectionId === "report") { populateDropdowns(); renderReport(); }
 }
@@ -143,10 +152,6 @@ function addClass() {
   renderClasses();
   populateDropdowns();
   toast("New Section Created");
-}
-
-function escapeHtml(str) {
-  return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function addStudent() {
@@ -208,7 +213,6 @@ function startEdit(id) {
 
   row.querySelector(".view-adm").classList.add("hidden");
   row.querySelector(".edit-adm").classList.remove("hidden");
-
   row.querySelector(".view-name").classList.add("hidden");
   row.querySelector(".edit-name").classList.remove("hidden");
 
@@ -226,7 +230,6 @@ function cancelEdit(id) {
 
   row.querySelector(".view-adm").classList.remove("hidden");
   row.querySelector(".edit-adm").classList.add("hidden");
-
   row.querySelector(".view-name").classList.remove("hidden");
   row.querySelector(".edit-name").classList.add("hidden");
 
@@ -294,8 +297,6 @@ function handleCSVUpload(e) {
 
     for (let i = startIndex; i < lines.length; i++) {
       const parts = lines[i].split(",").map(p => p.replace(/^["']|["']$/g, "").trim());
-      
-      // Pattern: S.No, Admission No, Student Name
       if (parts.length >= 3) {
         parsed.push({ admissionNo: parts[1], name: parts[2] });
       } else if (parts.length === 2) {
@@ -315,7 +316,6 @@ function handleCSVUpload(e) {
   reader.readAsText(file);
 }
 
-// Parses PDF documents formatted like: S.No | Admission No (ADM...) | Name of Student
 async function handlePDFUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -340,17 +340,15 @@ async function handlePDFUpload(e) {
     }
 
     const studentsFound = [];
-    const admRegex = /^[A-Za-z0-9]{3,}\d{3,}$/; // e.g. ADM2026101
+    const admRegex = /^[A-Za-z0-9]{3,}\d{3,}$/;
 
     for (let i = 0; i < extractedTokens.length; i++) {
       let token = extractedTokens[i];
 
-      // Detect Admission pattern
       if (token.toUpperCase().startsWith("ADM") || admRegex.test(token)) {
         let adm = token;
         let name = "";
         
-        // Next token is student name
         if (i + 1 < extractedTokens.length) {
           let nextToken = extractedTokens[i + 1];
           const isHeader = /admission|s\.no|student|name|class/i.test(nextToken);
@@ -365,7 +363,6 @@ async function handlePDFUpload(e) {
       }
     }
 
-    // Fallback: simple line extraction if table layout didn't match ADM tokens directly
     if (studentsFound.length === 0) {
       const cleanNames = extractedTokens
         .map(str => str.replace(/^[\d]+[\.\)\-\s]+/, "").trim())
@@ -391,19 +388,41 @@ document.getElementById("sectionSel").onchange = e => { current.section = e.targ
 
 function populateDropdowns() {
   let cNames = getClassNames();
-  ["entryClass", "sumClass", "repClass"].forEach(id => {
-    fillSelect(id, cNames, "Select Class");
-    document.getElementById(id).value = current.class;
+  ["entryClass", "sumClass", "repClass", "conClass"].forEach(id => {
+    fillSelect(id, cNames);
+    const el = document.getElementById(id);
+    if (el) el.value = current.class;
   });
-  ["entrySection", "sumSection", "repSection"].forEach(id => {
-    fillSelect(id, getSections(current.class), "Select Section");
-    document.getElementById(id).value = current.section;
+  ["entrySection", "sumSection", "repSection", "conSection"].forEach(id => {
+    fillSelect(id, getSections(current.class));
+    const el = document.getElementById(id);
+    if (el) el.value = current.section;
   });
+  
   let exams = getExamsFor(current.class, current.section).map(e => e.id);
   ["sumExam", "repExam"].forEach(id => {
     fillSelect(id, exams.map(x => data.exams[x].name), "Select Exam");
   });
+
+  let distinctExams = [...new Set(getExamsFor(current.class, current.section).map(e => e.name))];
+  fillSelect("conExamSel", distinctExams, distinctExams.length ? "" : "No Exams Recorded");
 }
+
+function onConFilterChange() {
+  current.class = document.getElementById("conClass").value;
+  const sections = getSections(current.class);
+  fillSelect("conSection", sections);
+  current.section = sections[0] || "A";
+  document.getElementById("conSection").value = current.section;
+
+  let distinctExams = [...new Set(getExamsFor(current.class, current.section).map(e => e.name))];
+  fillSelect("conExamSel", distinctExams, distinctExams.length ? "" : "No Exams Recorded");
+  renderConsolidatedSheet();
+}
+
+// -------------------------------------------------------------
+// MARK ENTRY LOGIC
+// -------------------------------------------------------------
 
 function loadMarks() {
   let c = document.getElementById("entryClass").value;
@@ -592,15 +611,10 @@ function handleSpreadsheetKeyNav(e, inp, colsPerRow) {
 function validateAndClampInput(inp, maxOverride) {
   let max = maxOverride !== undefined ? maxOverride : +inp.dataset.max;
   let val = inp.value.trim().toUpperCase();
-
   inp.classList.remove("input-error");
 
   if (val === "" || val === "AB") return;
-
-  if (isNaN(val)) {
-    inp.classList.add("input-error");
-    return;
-  }
+  if (isNaN(val)) { inp.classList.add("input-error"); return; }
 
   let num = +val;
   if (num < 0 || (max && num > max)) {
@@ -621,13 +635,11 @@ function calculateTermScore(val, dynamicExamMax) {
   if (filledEntries.length === 0) {
     return { total: "", totalStr: "", grade: "", gradePoint: "", res: "" };
   }
-
   if (filledEntries.every(v => v === "AB")) {
     return { total: "AB", totalStr: "AB", grade: "-", gradePoint: "-", res: "AB" };
   }
 
   const getNumericVal = (str) => (str === "" || str === "AB" || isNaN(str)) ? 0 : +str;
-
   const nbs = getNumericVal(nbsStr);
   const se = getNumericVal(seStr);
   const t = getNumericVal(tStr);
@@ -635,7 +647,6 @@ function calculateTermScore(val, dynamicExamMax) {
 
   const maxE = +dynamicExamMax || 80;
   const maxTotal = 20 + maxE;
-
   const totalRaw = nbs + se + t + e;
   const [score100, grade, gradePoint, res] = calculateGrade(totalRaw, maxTotal);
 
@@ -726,6 +737,164 @@ function clearCurrentMarks() {
     renderMarkEntryTable(data.exams[current.exam]);
   }
 }
+
+// -------------------------------------------------------------
+// CONSOLIDATED REGISTER (PEPS SCHOOL HEADER & DYNAMIC SUBJECTS)
+// -------------------------------------------------------------
+
+function renderConsolidatedSheet() {
+  const c = document.getElementById("conClass").value || current.class;
+  const s = document.getElementById("conSection").value || current.section;
+  const examName = document.getElementById("conExamSel").value;
+  const students = getClassObj(c, s).students;
+
+  const thead = document.getElementById("conTableHead");
+  const tbody = document.getElementById("conTableBody");
+  const subHeader = document.getElementById("conSchoolSubHeader");
+
+  subHeader.textContent = `Class ${c}-${s} | Academic Year: 2026-27 | Exam: ${examName || "Term - I"} [Consolidated]`;
+
+  if (!examName || examName === "No Exams Recorded") {
+    thead.innerHTML = `<tr><th class="text-center">No examination entries saved for Class ${c}-${s}.</th></tr>`;
+    tbody.innerHTML = `<tr><td class="text-center" style="padding: 24px; color: var(--text-muted);">Please enter subject scores under <b>Mark Entry</b> first.</td></tr>`;
+    return;
+  }
+
+  // Retrieve all subject exams registered under this Class, Section, and Exam Name
+  const k = getKey(c, s);
+  const subjectExams = Object.values(data.exams).filter(e => e.classKey === k && e.name === examName);
+
+  if (subjectExams.length === 0) {
+    thead.innerHTML = `<tr><th class="text-center">No subject entries found for ${examName}.</th></tr>`;
+    tbody.innerHTML = `<tr><td class="text-center" style="padding: 24px; color: var(--text-muted);">Enter subject marks under Mark Entry.</td></tr>`;
+    return;
+  }
+
+  // 1. Multi-Subject Dual Headers
+  let headerTop = `
+    <tr class="con-head-dark">
+      <th style="width: 50px; text-align: center;">S.No</th>
+      <th style="width: 120px; text-align: center;">Adm No</th>
+      <th style="min-width: 150px; text-align: left;">Student Name</th>
+  `;
+
+  let headerSub = `
+    <tr class="con-head-sub">
+      <th colspan="3" style="background:#1e293b;"></th>
+  `;
+
+  subjectExams.forEach(ex => {
+    headerTop += `<th colspan="2" style="text-align: center;">${escapeHtml(ex.subject)}</th>`;
+    headerSub += `
+      <th style="width: 75px; text-align: center;">Raw(/${ex.max})</th>
+      <th style="width: 65px; text-align: center;">/100</th>
+    `;
+  });
+
+  headerTop += `</tr>`;
+  headerSub += `</tr>`;
+  thead.innerHTML = headerTop + headerSub;
+
+  // 2. Table Rows
+  tbody.innerHTML = students.map((st, i) => {
+    let rowHtml = `
+      <tr>
+        <td class="text-center" style="color:var(--text-muted); font-size:12px;">${i + 1}</td>
+        <td class="text-center" style="font-size:12px; font-weight:600; color:#334155;">${escapeHtml(st.admissionNo || '-')}</td>
+        <td class="text-left"><b>${escapeHtml(st.name)}</b></td>
+    `;
+
+    subjectExams.forEach(ex => {
+      let rawVal = "-";
+      let scaledVal = "-";
+      let entry = ex.marks[st.id];
+
+      if (entry !== undefined && entry !== null && entry !== "") {
+        if (ex.pattern === "term") {
+          let termObj = typeof entry === "object" ? entry : { nbs: "", se: "", t: "", e: entry };
+          let resData = calculateTermScore(termObj, ex.max);
+          rawVal = resData.totalStr || "-";
+          scaledVal = typeof resData.total === "number" ? formatNum(resData.total) : (resData.total || "-");
+        } else {
+          let rawStr = String(entry).trim().toUpperCase();
+          if (rawStr === "AB") {
+            rawVal = "AB";
+            scaledVal = "AB";
+          } else if (!isNaN(rawStr)) {
+            let [sc100] = calculateGrade(+rawStr, ex.max);
+            rawVal = rawStr;
+            scaledVal = formatNum(sc100);
+          }
+        }
+      }
+
+      rowHtml += `
+        <td class="text-center" style="font-weight:600; color:#475569;">${rawVal}</td>
+        <td class="text-center" style="font-weight:700; color:#0f172a;">${scaledVal}</td>
+      `;
+    });
+
+    rowHtml += `</tr>`;
+    return rowHtml;
+  }).join("");
+}
+
+function exportConsolidatedCSV() {
+  const c = document.getElementById("conClass").value || current.class;
+  const s = document.getElementById("conSection").value || current.section;
+  const examName = document.getElementById("conExamSel").value;
+  const students = getClassObj(c, s).students;
+
+  const k = getKey(c, s);
+  const subjectExams = Object.values(data.exams).filter(e => e.classKey === k && e.name === examName);
+
+  if (subjectExams.length === 0) return alert("No subject data available to export.");
+
+  let csv = `PEARLS PUBLIC SCHOOL (CBSE) - Class ${c}-${s} ${examName} Consolidated Marksheet\n`;
+  csv += `S.No,Admission No,Student Name,` + subjectExams.map(ex => `"${ex.subject} Raw(/${ex.max})","${ex.subject} (/100)"`).join(",") + `\n`;
+
+  students.forEach((st, i) => {
+    let row = `"${i + 1}","${st.admissionNo || ''}","${st.name}"`;
+    subjectExams.forEach(ex => {
+      let rawVal = "";
+      let scaledVal = "";
+      let entry = ex.marks[st.id];
+
+      if (entry !== undefined && entry !== null && entry !== "") {
+        if (ex.pattern === "term") {
+          let termObj = typeof entry === "object" ? entry : { nbs: "", se: "", t: "", e: entry };
+          let resData = calculateTermScore(termObj, ex.max);
+          rawVal = resData.totalStr;
+          scaledVal = typeof resData.total === "number" ? formatNum(resData.total) : resData.total;
+        } else {
+          let rawStr = String(entry).trim().toUpperCase();
+          if (rawStr === "AB") {
+            rawVal = "AB";
+            scaledVal = "AB";
+          } else if (!isNaN(rawStr)) {
+            let [sc100] = calculateGrade(+rawStr, ex.max);
+            rawVal = rawStr;
+            scaledVal = formatNum(sc100);
+          }
+        }
+      }
+      row += `,"${rawVal}","${scaledVal}"`;
+    });
+    csv += row + `\n`;
+  });
+
+  const uri = encodeURI("data:text/csv;charset=utf-8," + csv);
+  const link = document.createElement("a");
+  link.setAttribute("href", uri);
+  link.setAttribute("download", `Consolidated_Class_${c}${s}_${examName}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// -------------------------------------------------------------
+// STATISTICS & REPORTS
+// -------------------------------------------------------------
 
 function calculateStatistics(e) {
   let students = getClassObj().students;
@@ -935,12 +1104,9 @@ function renderReport() {
   let stats = calculateStatistics(examObj);
   
   document.getElementById("reportPage").innerHTML = `
-    <!-- School Header -->
     <div style="text-align:center; margin-bottom:4px; font-weight:800; font-size:18px; color:var(--text-main); letter-spacing:0.5px;">
       PEARLS PUBLIC SCHOOL <span style="font-size:13px; font-weight:600;">(CBSE)</span>
     </div>
-
-    <!-- Exam Sub-Header -->
     <div style="text-align:center; margin-bottom:12px; font-weight:700; font-size:14px; color:var(--text-muted);">
       Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject}) [${isTerm ? 'Term Pattern' : 'Mid Term Pattern'}]
     </div>
