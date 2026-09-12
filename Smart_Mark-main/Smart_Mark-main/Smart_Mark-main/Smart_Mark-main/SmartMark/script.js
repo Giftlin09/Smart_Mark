@@ -22,6 +22,7 @@ function save() {
 
 function toast(msg, isError = false) {
   const t = document.getElementById("toast");
+  if (!t) return;
   t.textContent = msg;
   t.style.backgroundColor = isError ? "var(--danger-color)" : "var(--sidebar-bg)";
   t.style.display = "block";
@@ -76,15 +77,14 @@ function calculateGrade(value, maxMark) {
   else if (score100 >= 61) { grade = "B2"; gradePoint = "7.0"; }
   else if (score100 >= 51) { grade = "C1"; gradePoint = "6.0"; }
   else if (score100 >= 41) { grade = "C2"; gradePoint = "5.0"; }
-  else if (score100 >= 33) { grade = "D";  gradePoint = "4.0"; } // 33 to 40 (Grade D)
-  else if (score100 >= 21) { grade = "E1"; gradePoint = "3.0"; } // 21 to 32 (Grade E1)
-  else { grade = "E2"; gradePoint = "2.0"; }                     // 0 to 20 (Grade E2)
+  else if (score100 >= 33) { grade = "D";  gradePoint = "4.0"; }
+  else if (score100 >= 21) { grade = "E1"; gradePoint = "3.0"; }
+  else { grade = "E2"; gradePoint = "2.0"; }
 
   let resultStatus = isPassing(score100) ? "Pass" : "Fail";
   return [score100, grade, gradePoint, resultStatus];
 }
 
-// Pass criterion strictly >= 35
 function isPassing(score100) {
   return typeof score100 === "number" && score100 >= 35;
 }
@@ -145,12 +145,19 @@ function addClass() {
   toast("New Section Created");
 }
 
+function escapeHtml(str) {
+  return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 function addStudent() {
+  let adm = document.getElementById("studentAdm").value.trim().toUpperCase();
   let name = document.getElementById("studentName").value.trim();
   if (!name) return alert("Enter Student Name.");
   if (!current.class || !current.section) return alert("Select Class and Section first.");
-  getClassObj().students.push({ id: Date.now(), name });
+  
+  getClassObj().students.push({ id: Date.now(), admissionNo: adm, name });
   save();
+  document.getElementById("studentAdm").value = "";
   document.getElementById("studentName").value = "";
   renderClasses();
   toast("Student added successfully");
@@ -170,13 +177,213 @@ function renderClasses() {
   document.getElementById("sectionSel").value = current.section;
   document.getElementById("studentHeading").textContent = `Enrolled Students - Class ${current.class || "-"} (${current.section || "-"})`;
   
-  document.getElementById("students").innerHTML = (getClassObj().students || []).map((s, i) =>
-    `<tr>
+  document.getElementById("students").innerHTML = (getClassObj().students || []).map((s, i) => `
+    <tr id="row-${s.id}">
       <td class="text-center">${i + 1}</td>
-      <td class="text-left"><b>${s.name}</b></td>
-      <td style="text-align:right;"><button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteStudent(${s.id})">Remove</button></td>
-    </tr>`
-  ).join("");
+      <td class="text-center adm-cell">
+        <span class="view-adm"><b>${escapeHtml(s.admissionNo || "-")}</b></span>
+        <input type="text" class="input-control edit-adm hidden" value="${escapeHtml(s.admissionNo || "")}" style="padding: 4px 6px; font-size: 13px; text-align:center;">
+      </td>
+      <td class="text-left name-cell">
+        <span class="view-name"><b>${escapeHtml(s.name)}</b></span>
+        <input type="text" class="input-control edit-name hidden" value="${escapeHtml(s.name)}" style="padding: 4px 8px; font-size: 13px;" onkeydown="handleEditKey(event, ${s.id})">
+      </td>
+      <td style="text-align:center;">
+        <div class="action-btns" id="actions-view-${s.id}" style="display: flex; justify-content: center; gap: 6px;">
+          <button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="startEdit(${s.id})">Edit</button>
+          <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteStudent(${s.id})">Remove</button>
+        </div>
+        <div class="edit-btns hidden" id="actions-edit-${s.id}" style="display: flex; justify-content: center; gap: 6px;">
+          <button class="btn btn-success" style="padding: 4px 10px; font-size: 12px;" onclick="saveEdit(${s.id})">Save</button>
+          <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="cancelEdit(${s.id})">Cancel</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function startEdit(id) {
+  const row = document.getElementById(`row-${id}`);
+  if (!row) return;
+
+  row.querySelector(".view-adm").classList.add("hidden");
+  row.querySelector(".edit-adm").classList.remove("hidden");
+
+  row.querySelector(".view-name").classList.add("hidden");
+  row.querySelector(".edit-name").classList.remove("hidden");
+
+  document.getElementById(`actions-view-${id}`).classList.add("hidden");
+  document.getElementById(`actions-edit-${id}`).classList.remove("hidden");
+
+  const nameInput = row.querySelector(".edit-name");
+  nameInput.focus();
+  nameInput.select();
+}
+
+function cancelEdit(id) {
+  const row = document.getElementById(`row-${id}`);
+  if (!row) return;
+
+  row.querySelector(".view-adm").classList.remove("hidden");
+  row.querySelector(".edit-adm").classList.add("hidden");
+
+  row.querySelector(".view-name").classList.remove("hidden");
+  row.querySelector(".edit-name").classList.add("hidden");
+
+  document.getElementById(`actions-view-${id}`).classList.remove("hidden");
+  document.getElementById(`actions-edit-${id}`).classList.add("hidden");
+}
+
+function handleEditKey(e, id) {
+  if (e.key === "Enter") saveEdit(id);
+  if (e.key === "Escape") cancelEdit(id);
+}
+
+function saveEdit(id) {
+  const row = document.getElementById(`row-${id}`);
+  const newAdm = row.querySelector(".edit-adm").value.trim().toUpperCase();
+  const newName = row.querySelector(".edit-name").value.trim();
+
+  if (!newName) return toast("Student name cannot be empty", true);
+
+  const student = getClassObj().students.find(s => s.id === id);
+  if (student) {
+    student.admissionNo = newAdm;
+    student.name = newName;
+    save();
+    renderClasses();
+    toast("Student details updated successfully");
+  }
+}
+
+function appendStudents(studentList) {
+  if (!current.class || !current.section) return alert("Select Class and Section first.");
+  const validList = studentList.filter(s => s.name && s.name.trim().length > 0);
+  if (validList.length === 0) return toast("No valid student names found", true);
+
+  validList.forEach((st, idx) => {
+    getClassObj().students.push({
+      id: Date.now() + idx,
+      admissionNo: (st.admissionNo || "").trim().toUpperCase(),
+      name: st.name.trim()
+    });
+  });
+
+  save();
+  renderClasses();
+  toast(`Imported ${validList.length} student(s) successfully`);
+}
+
+function handleCSVUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const text = evt.target.result;
+    const lines = text.split(/\r\n|\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const parsed = [];
+
+    let startIndex = 0;
+    if (lines.length > 0) {
+      const headerLine = lines[0].toLowerCase();
+      if (headerLine.includes("name") || headerLine.includes("admission") || headerLine.includes("s.no")) {
+        startIndex = 1;
+      }
+    }
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const parts = lines[i].split(",").map(p => p.replace(/^["']|["']$/g, "").trim());
+      
+      // Pattern: S.No, Admission No, Student Name
+      if (parts.length >= 3) {
+        parsed.push({ admissionNo: parts[1], name: parts[2] });
+      } else if (parts.length === 2) {
+        if (!isNaN(parts[0])) {
+          parsed.push({ admissionNo: "", name: parts[1] });
+        } else {
+          parsed.push({ admissionNo: parts[0], name: parts[1] });
+        }
+      } else if (parts.length === 1 && parts[0]) {
+        parsed.push({ admissionNo: "", name: parts[0] });
+      }
+    }
+
+    appendStudents(parsed);
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+}
+
+// Parses PDF documents formatted like: S.No | Admission No (ADM...) | Name of Student
+async function handlePDFUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (typeof pdfjsLib === "undefined") {
+    return alert("PDF processing library is loading. Please try again in a few moments.");
+  }
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let extractedTokens = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageTokens = textContent.items
+        .map(item => item.str.trim())
+        .filter(str => str.length > 0);
+
+      extractedTokens = extractedTokens.concat(pageTokens);
+    }
+
+    const studentsFound = [];
+    const admRegex = /^[A-Za-z0-9]{3,}\d{3,}$/; // e.g. ADM2026101
+
+    for (let i = 0; i < extractedTokens.length; i++) {
+      let token = extractedTokens[i];
+
+      // Detect Admission pattern
+      if (token.toUpperCase().startsWith("ADM") || admRegex.test(token)) {
+        let adm = token;
+        let name = "";
+        
+        // Next token is student name
+        if (i + 1 < extractedTokens.length) {
+          let nextToken = extractedTokens[i + 1];
+          const isHeader = /admission|s\.no|student|name|class/i.test(nextToken);
+          if (!isHeader && isNaN(nextToken)) {
+            name = nextToken;
+            i++;
+          }
+        }
+        if (name) {
+          studentsFound.push({ admissionNo: adm, name });
+        }
+      }
+    }
+
+    // Fallback: simple line extraction if table layout didn't match ADM tokens directly
+    if (studentsFound.length === 0) {
+      const cleanNames = extractedTokens
+        .map(str => str.replace(/^[\d]+[\.\)\-\s]+/, "").trim())
+        .filter(str => {
+          const lower = str.toLowerCase();
+          const isHeader = lower.includes("student name") || lower.includes("s.no") || lower.includes("class") || lower.includes("admission");
+          return str.length > 1 && !isHeader && isNaN(str);
+        });
+      cleanNames.forEach(n => studentsFound.push({ admissionNo: "", name: n }));
+    }
+
+    appendStudents(studentsFound);
+  } catch (err) {
+    console.error(err);
+    toast("Failed to parse PDF file. Ensure it contains selectable text.", true);
+  } finally {
+    e.target.value = "";
+  }
 }
 
 document.getElementById("classSel").onchange = e => { current.class = e.target.value; current.section = getSections(current.class)[0] || ""; renderClasses(); };
@@ -250,15 +457,16 @@ function renderMarkEntryTable(examObj) {
   if (examObj.pattern === "term") {
     thead.innerHTML = `
       <tr>
-        <th class="text-center" style="width: 50px;">S.No</th>
+        <th class="text-center" style="width: 45px;">S.No</th>
+        <th class="text-center" style="width: 120px;">Adm No.</th>
         <th class="text-left">Student Name</th>
-        <th class="text-center" style="width: 75px;">NBS (5)</th>
-        <th class="text-center" style="width: 75px;">SE (5)</th>
-        <th class="text-center" style="width: 75px;">T (10)</th>
-        <th class="text-center" style="width: 85px;">Exam (${dynamicExamMax})</th>
-        <th class="text-center" style="width: 85px;">Total (${totalMax})</th>
+        <th class="text-center" style="width: 70px;">NBS (5)</th>
+        <th class="text-center" style="width: 70px;">SE (5)</th>
+        <th class="text-center" style="width: 70px;">T (10)</th>
+        <th class="text-center" style="width: 80px;">Exam (${dynamicExamMax})</th>
+        <th class="text-center" style="width: 80px;">Total (${totalMax})</th>
         <th class="text-center" style="width: 65px;">Grade</th>
-        <th class="text-center" style="width: 75px;">Grade Point</th>
+        <th class="text-center" style="width: 75px;">Grade Pt</th>
         <th class="text-center" style="width: 70px;">Result</th>
       </tr>`;
 
@@ -272,11 +480,12 @@ function renderMarkEntryTable(examObj) {
 
       return `<tr>
         <td class="text-center">${i + 1}</td>
-        <td class="text-left"><b>${st.name}</b></td>
-        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="0" data-id="${st.id}" data-field="nbs" data-max="5" value="${val.nbs ?? ''}" style="width:75px; text-align:center;" placeholder="Mark/AB"></td>
-        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="1" data-id="${st.id}" data-field="se" data-max="5" value="${val.se ?? ''}" style="width:75px; text-align:center;" placeholder="Mark/AB"></td>
-        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="2" data-id="${st.id}" data-field="t" data-max="10" value="${val.t ?? ''}" style="width:75px; text-align:center;" placeholder="Mark/AB"></td>
-        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="3" data-id="${st.id}" data-field="e" data-max="${dynamicExamMax}" value="${val.e ?? ''}" style="width:85px; text-align:center;" placeholder="Mark/AB"></td>
+        <td class="text-center" style="font-size: 12px; color: var(--text-muted); font-weight: 600;">${escapeHtml(st.admissionNo || "-")}</td>
+        <td class="text-left"><b>${escapeHtml(st.name)}</b></td>
+        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="0" data-id="${st.id}" data-field="nbs" data-max="5" value="${val.nbs ?? ''}" style="width:70px; text-align:center;" placeholder="Mark/AB"></td>
+        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="1" data-id="${st.id}" data-field="se" data-max="5" value="${val.se ?? ''}" style="width:70px; text-align:center;" placeholder="Mark/AB"></td>
+        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="2" data-id="${st.id}" data-field="t" data-max="10" value="${val.t ?? ''}" style="width:70px; text-align:center;" placeholder="Mark/AB"></td>
+        <td class="text-center"><input type="text" class="input-control term-input" data-row="${i}" data-col="3" data-id="${st.id}" data-field="e" data-max="${dynamicExamMax}" value="${val.e ?? ''}" style="width:80px; text-align:center;" placeholder="Mark/AB"></td>
         <td class="text-center"><b>${resData.totalStr}</b></td>
         <td class="text-center"><span class="${badgeClass}">${resData.grade}</span></td>
         <td class="text-center">${resData.gradePoint}</td>
@@ -296,7 +505,8 @@ function renderMarkEntryTable(examObj) {
   } else {
     thead.innerHTML = `
       <tr>
-        <th class="text-center" style="width: 50px;">S.No</th>
+        <th class="text-center" style="width: 45px;">S.No</th>
+        <th class="text-center" style="width: 130px;">Adm No.</th>
         <th class="text-left">Student Name</th>
         <th class="text-center" style="width: 110px;">Obtained Mark</th>
         <th class="text-center" style="width: 110px;">Converted (/100)</th>
@@ -322,7 +532,6 @@ function renderMarkEntryTable(examObj) {
   }
 }
 
-// Spreadsheet Keyboard Navigation
 function handleSpreadsheetKeyNav(e, inp, colsPerRow) {
   const row = +inp.dataset.row;
   const col = +(inp.dataset.col || 0);
@@ -380,7 +589,6 @@ function handleSpreadsheetKeyNav(e, inp, colsPerRow) {
   }
 }
 
-// Visual Range Verification
 function validateAndClampInput(inp, maxOverride) {
   let max = maxOverride !== undefined ? maxOverride : +inp.dataset.max;
   let val = inp.value.trim().toUpperCase();
@@ -400,7 +608,6 @@ function validateAndClampInput(inp, maxOverride) {
   }
 }
 
-// Term Calculation: Sums all entered numeric scores even if Exam or other components are AB
 function calculateTermScore(val, dynamicExamMax) {
   const parseVal = (v) => String(v ?? "").trim().toUpperCase();
   const nbsStr = parseVal(val.nbs);
@@ -445,11 +652,11 @@ function updateTermRow(inp, dynamicExamMax) {
   let resData = calculateTermScore({ nbs, se, t, e }, dynamicExamMax);
   let badgeClass = resData.grade && resData.grade !== "-" ? `badge badge-${resData.grade.toLowerCase()}` : '';
 
-  row.children[6].innerHTML = `<b>${resData.totalStr}</b>`;
-  row.children[7].innerHTML = `<span class="${badgeClass}">${resData.grade}</span>`;
-  row.children[8].textContent = resData.gradePoint;
-  row.children[9].textContent = resData.res;
-  row.children[9].className = `text-center ${getResultClass(resData.res)}`;
+  row.children[7].innerHTML = `<b>${resData.totalStr}</b>`;
+  row.children[8].innerHTML = `<span class="${badgeClass}">${resData.grade}</span>`;
+  row.children[9].textContent = resData.gradePoint;
+  row.children[10].textContent = resData.res;
+  row.children[10].className = `text-center ${getResultClass(resData.res)}`;
 }
 
 function createMarkRow(st, index, val, score100, grade, gradePoint, res) {
@@ -459,7 +666,8 @@ function createMarkRow(st, index, val, score100, grade, gradePoint, res) {
 
   return `<tr>
     <td class="text-center">${index + 1}</td>
-    <td class="text-left"><b>${st.name}</b></td>
+    <td class="text-center" style="font-size:12px; color:var(--text-muted); font-weight:600;">${escapeHtml(st.admissionNo || "-")}</td>
+    <td class="text-left"><b>${escapeHtml(st.name)}</b></td>
     <td class="text-center"><input type="text" class="input-control mark-input" data-row="${index}" data-col="0" data-id="${st.id}" value="${val}" style="width:100px; text-align:center;" placeholder="Mark / AB"></td>
     <td class="text-center"><b>${convertedText}</b></td>
     <td class="text-center"><span class="${badgeClass}">${grade}</span></td>
@@ -474,11 +682,11 @@ function updateMarkRow(inp, max) {
   let convertedText = score100 === "AB" ? "AB" : (score100 === "" ? "" : formatNum(score100));
   let badgeClass = grade && grade !== "-" ? `badge badge-${grade.toLowerCase()}` : '';
 
-  row.children[3].innerHTML = `<b>${convertedText}</b>`;
-  row.children[4].innerHTML = `<span class="${badgeClass}">${grade}</span>`;
-  row.children[5].textContent = gradePoint;
-  row.children[6].textContent = res;
-  row.children[6].className = `text-center ${getResultClass(res)}`;
+  row.children[4].innerHTML = `<b>${convertedText}</b>`;
+  row.children[5].innerHTML = `<span class="${badgeClass}">${grade}</span>`;
+  row.children[6].textContent = gradePoint;
+  row.children[7].textContent = res;
+  row.children[7].className = `text-center ${getResultClass(res)}`;
 }
 
 function saveCurrentMarks() {
@@ -557,7 +765,7 @@ function calculateStatistics(e) {
     }
   });
 
-  let passCount = numericScores.filter(v => v >= 35).length; // Pass is >= 35
+  let passCount = numericScores.filter(v => v >= 35).length;
   let attendedCount = numericScores.length;
 
   return {
@@ -655,16 +863,17 @@ function renderReport() {
     tableHeaderHtml = `
       <thead>
         <tr>
-          <th class="text-center" style="width: 45px;">S.No</th>
-          <th class="text-left">Name</th>
-          <th class="text-center" style="width: 65px;">NBS (5)</th>
-          <th class="text-center" style="width: 65px;">SE (5)</th>
-          <th class="text-center" style="width: 65px;">T (10)</th>
-          <th class="text-center" style="width: 80px;">Exam (${examMax})</th>
-          <th class="text-center" style="width: 80px;">Total (${totalMax})</th>
-          <th class="text-center" style="width: 65px;">Grade</th>
-          <th class="text-center" style="width: 75px;">Grade Pt</th>
-          <th class="text-center" style="width: 75px;">Result</th>
+          <th class="text-center" style="width: 40px;">S.No</th>
+          <th class="text-center" style="width: 100px;">Adm No.</th>
+          <th class="text-left">Name of the Student</th>
+          <th class="text-center" style="width: 60px;">NBS (5)</th>
+          <th class="text-center" style="width: 60px;">SE (5)</th>
+          <th class="text-center" style="width: 60px;">T (10)</th>
+          <th class="text-center" style="width: 75px;">Exam (${examMax})</th>
+          <th class="text-center" style="width: 75px;">Total (${totalMax})</th>
+          <th class="text-center" style="width: 60px;">Grade</th>
+          <th class="text-center" style="width: 70px;">Grade Pt</th>
+          <th class="text-center" style="width: 70px;">Result</th>
         </tr>
       </thead>`;
 
@@ -676,7 +885,8 @@ function renderReport() {
 
       return `<tr>
         <td class="text-center">${i + 1}</td>
-        <td class="text-left">${s.name}</td>
+        <td class="text-center" style="font-weight:600; color: #475569;">${escapeHtml(s.admissionNo || "-")}</td>
+        <td class="text-left">${escapeHtml(s.name)}</td>
         <td class="text-center">${val.nbs !== "" && val.nbs !== undefined ? val.nbs : '-'}</td>
         <td class="text-center">${val.se !== "" && val.se !== undefined ? val.se : '-'}</td>
         <td class="text-center">${val.t !== "" && val.t !== undefined ? val.t : '-'}</td>
@@ -692,13 +902,14 @@ function renderReport() {
     tableHeaderHtml = `
       <thead>
         <tr>
-          <th class="text-center" style="width: 50px;">S.No</th>
-          <th class="text-left">Name</th>
-          <th class="text-center" style="width: 110px;">Obtained Mark</th>
-          <th class="text-center" style="width: 110px;">Mark (100)</th>
-          <th class="text-center" style="width: 75px;">Grade</th>
-          <th class="text-center" style="width: 85px;">Grade Point</th>
-          <th class="text-center" style="width: 85px;">Result</th>
+          <th class="text-center" style="width: 45px;">S.No</th>
+          <th class="text-center" style="width: 110px;">Adm No.</th>
+          <th class="text-left">Name of the Student</th>
+          <th class="text-center" style="width: 100px;">Obtained Mark</th>
+          <th class="text-center" style="width: 100px;">Mark (100)</th>
+          <th class="text-center" style="width: 70px;">Grade</th>
+          <th class="text-center" style="width: 80px;">Grade Point</th>
+          <th class="text-center" style="width: 80px;">Result</th>
         </tr>
       </thead>`;
 
@@ -710,7 +921,8 @@ function renderReport() {
 
       return `<tr>
         <td class="text-center">${i + 1}</td>
-        <td class="text-left">${s.name}</td>
+        <td class="text-center" style="font-weight:600; color: #475569;">${escapeHtml(s.admissionNo || "-")}</td>
+        <td class="text-left">${escapeHtml(s.name)}</td>
         <td class="text-center">${val}</td>
         <td class="text-center">${convertedText}</td>
         <td class="text-center"><b>${grade}</b></td>
@@ -738,7 +950,6 @@ function renderReport() {
       <tbody>${rowsHtml}</tbody>
     </table>
     
-    <!-- Footer with labels only in bold, numbers in regular font -->
     <div style="margin-top:14px; font-size:12px; line-height:1.6;">
       <div>
         <b>Class Metrics:</b> &nbsp;
@@ -770,7 +981,6 @@ function downloadPDF() {
   html2pdf().set(opt).from(element).save();
 }
 
-// Native Apple Pages (.rtf) Export
 function exportToPages() {
   const examObj = data.exams[current.exam];
   if (!examObj) return alert("Select or generate an exam preview first.");
@@ -782,41 +992,39 @@ function exportToPages() {
 
   let rtf = "{\\rtf1\\ansi\\deff0\n";
   rtf += "{\\fonttbl{\\f0 Arial;}}\n";
-  rtf += "{\\colortbl ;\\red0\\green128\\blue0;\\red220\\green38\\blue38;}\n"; // Green, Red
+  rtf += "{\\colortbl ;\\red0\\green128\\blue0;\\red220\\green38\\blue38;}\n";
   rtf += "\\viewkind4\\uc1\\pard\\qc\\b\\fs32 PEARLS PUBLIC SCHOOL \\fs22 (CBSE)\\par\\b0\n";
   rtf += `\\fs20 Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject})\\par\\par\n`;
 
-  // RTF Table Headers
-  rtf += "\\trowd\\trgaph70\\cellx800\\cellx3600";
+  rtf += "\\trowd\\trgaph70\\cellx600\\cellx2200\\cellx4800";
   if (isTerm) {
-    rtf += "\\cellx4500\\cellx5400\\cellx6300\\cellx7400\\cellx8400\\cellx9300\\cellx10200\\cellx11200\n";
-    rtf += "\\intbl\\b S.No\\cell Student Name\\cell NBS (5)\\cell SE (5)\\cell T (10)\\cell Exam (" + examMax + ")\\cell Total\\cell Grade\\cell Grade Pt\\cell Result\\cell\\row\\b0\n";
+    rtf += "\\cellx5600\\cellx6400\\cellx7200\\cellx8200\\cellx9200\\cellx10000\\cellx10900\\cellx11800\n";
+    rtf += "\\intbl\\b S.No\\cell Adm No.\\cell Student Name\\cell NBS (5)\\cell SE (5)\\cell T (10)\\cell Exam (" + examMax + ")\\cell Total\\cell Grade\\cell Grade Pt\\cell Result\\cell\\row\\b0\n";
   } else {
-    rtf += "\\cellx5200\\cellx6700\\cellx7800\\cellx8900\\cellx10200\n";
-    rtf += "\\intbl\\b S.No\\cell Student Name\\cell Obtained Mark\\cell Mark (100)\\cell Grade\\cell Grade Pt\\cell Result\\cell\\row\\b0\n";
+    rtf += "\\cellx6200\\cellx7500\\cellx8600\\cellx9700\\cellx11000\n";
+    rtf += "\\intbl\\b S.No\\cell Adm No.\\cell Student Name\\cell Obtained Mark\\cell Mark (100)\\cell Grade\\cell Grade Pt\\cell Result\\cell\\row\\b0\n";
   }
 
-  // Rows
   students.forEach((s, i) => {
+    let adm = s.admissionNo || "-";
     let val = examObj.marks[s.id] ?? "";
     if (isTerm) {
       if (typeof val !== "object") val = { nbs: "", se: "", t: "", e: val };
       let resData = calculateTermScore(val, examMax);
       let resColor = resData.res === "Pass" ? "\\cf1" : "\\cf2";
 
-      rtf += "\\trowd\\trgaph70\\cellx800\\cellx3600\\cellx4500\\cellx5400\\cellx6300\\cellx7400\\cellx8400\\cellx9300\\cellx10200\\cellx11200\n";
-      rtf += `\\intbl ${i + 1}\\cell ${s.name}\\cell ${val.nbs || '-'}\\cell ${val.se || '-'}\\cell ${val.t || '-'}\\cell ${val.e || '-'}\\cell ${resData.totalStr}\\cell ${resData.grade}\\cell ${resData.gradePoint}\\cell ${resColor}\\b ${resData.res}\\b0\\cf0\\cell\\row\n`;
+      rtf += "\\trowd\\trgaph70\\cellx600\\cellx2200\\cellx4800\\cellx5600\\cellx6400\\cellx7200\\cellx8200\\cellx9200\\cellx10000\\cellx10900\\cellx11800\n";
+      rtf += `\\intbl ${i + 1}\\cell ${adm}\\cell ${s.name}\\cell ${val.nbs || '-'}\\cell ${val.se || '-'}\\cell ${val.t || '-'}\\cell ${val.e || '-'}\\cell ${resData.totalStr}\\cell ${resData.grade}\\cell ${resData.gradePoint}\\cell ${resColor}\\b ${resData.res}\\b0\\cf0\\cell\\row\n`;
     } else {
       let [score100, grade, gradePoint, res] = calculateGrade(val, examObj.max);
       let convertedText = score100 === "AB" ? "AB" : (score100 === "" ? "" : formatNum(score100));
       let resColor = res === "Pass" ? "\\cf1" : "\\cf2";
 
-      rtf += "\\trowd\\trgaph70\\cellx800\\cellx3600\\cellx5200\\cellx6700\\cellx7800\\cellx8900\\cellx10200\n";
-      rtf += `\\intbl ${i + 1}\\cell ${s.name}\\cell ${val}\\cell ${convertedText}\\cell ${grade}\\cell ${gradePoint}\\cell ${resColor}\\b ${res}\\b0\\cf0\\cell\\row\n`;
+      rtf += "\\trowd\\trgaph70\\cellx600\\cellx2200\\cellx4800\\cellx6200\\cellx7500\\cellx8600\\cellx9700\\cellx11000\n";
+      rtf += `\\intbl ${i + 1}\\cell ${adm}\\cell ${s.name}\\cell ${val}\\cell ${convertedText}\\cell ${grade}\\cell ${gradePoint}\\cell ${resColor}\\b ${res}\\b0\\cf0\\cell\\row\n`;
     }
   });
 
-  // Footer summary
   rtf += `\\pard\\sa100\\par\\b Class Metrics:\\b0  Total Enrolled: ${stats.totalStudents} | Average: ${stats.average}% | Passed: ${stats.passed} | Absent: ${stats.absentCount} | Pass Rate: ${stats.passRate}%\\par\n`;
   rtf += `\\b Grade Counts:\\b0  ${Object.entries(stats.counts).map(([gr, count]) => `${gr}: ${count}`).join(" | ")}\\par\n`;
   rtf += "}";
@@ -832,7 +1040,6 @@ function exportToPages() {
   URL.revokeObjectURL(url);
 }
 
-// Client-Side Microsoft Word (.doc) Generation with 4-Sided Frame
 function exportToWord() {
   const content = document.getElementById('reportPage');
   if (!content || !content.innerHTML.trim()) {
@@ -888,20 +1095,20 @@ function exportToExcel() {
   let csv = "";
 
   if (isTerm) {
-    csv = `S.No,Student Name,NBS (5),SE (5),T (10),Exam (${examMax}),Total (${totalMax}),Grade,Grade Point,Result\n`;
+    csv = `S.No,Admission No.,Student Name,NBS (5),SE (5),T (10),Exam (${examMax}),Total (${totalMax}),Grade,Grade Point,Result\n`;
     students.forEach((s, i) => {
       let val = examObj.marks[s.id] || { nbs: "", se: "", t: "", e: "" };
       if (typeof val !== "object") val = { nbs: "", se: "", t: "", e: val };
       let resData = calculateTermScore(val, examMax);
-      csv += `"${i + 1}","${s.name}","${val.nbs ?? ''}","${val.se ?? ''}","${val.t ?? ''}","${val.e ?? ''}","${resData.totalStr}","${resData.grade}","${resData.gradePoint}","${resData.res}"\n`;
+      csv += `"${i + 1}","${s.admissionNo || ''}","${s.name}","${val.nbs ?? ''}","${val.se ?? ''}","${val.t ?? ''}","${val.e ?? ''}","${resData.totalStr}","${resData.grade}","${resData.gradePoint}","${resData.res}"\n`;
     });
   } else {
-    csv = "S.No,Student Name,Obtained Mark,Out of 100,Grade,Grade Point,Result\n";
+    csv = "S.No,Admission No.,Student Name,Obtained Mark,Out of 100,Grade,Grade Point,Result\n";
     students.forEach((s, i) => {
       let val = typeof examObj.marks[s.id] === "object" ? (examObj.marks[s.id].e ?? "") : (examObj.marks[s.id] ?? "");
       let [score100, grade, gradePoint, res] = calculateGrade(val, examObj.max);
       let formattedScore = score100 === "AB" ? "AB" : (score100 === "" ? "" : formatNum(score100));
-      csv += `"${i + 1}","${s.name}","${val}","${formattedScore}","${grade}","${gradePoint}","${res}"\n`;
+      csv += `"${i + 1}","${s.admissionNo || ''}","${s.name}","${val}","${formattedScore}","${grade}","${gradePoint}","${res}"\n`;
     });
   }
 

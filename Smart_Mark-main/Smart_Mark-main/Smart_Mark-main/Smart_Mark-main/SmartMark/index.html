@@ -8,6 +8,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- html2pdf Library for Client-side PDF Generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- PDF.js Library for Client-side PDF Upload Parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
 </head>
 <body>
   <div class="app-container">
@@ -52,10 +59,11 @@
           <h3>Quick Start Guide</h3>
           <ol class="guide-list">
             <li>Classes <b>1 through 12</b> are available in the dropdowns.</li>
-            <li>Add students under <b>Classes & Roster</b>.</li>
+            <li>Add students manually or import via <b>CSV</b> and <b>PDF</b> with <b>Admission Numbers</b>.</li>
+            <li>Click <b>Edit</b> to update a student's name or admission number directly in the roster table.</li>
             <li>Select <b>Mid Term</b> or <b>Term Exam</b> pattern with custom Exam Max Marks.</li>
             <li>Check <b>Grade Analytics</b> to view precise performance distribution across all 9 scales.</li>
-            <li>Generate consolidated reports and export to <b>CSV</b>, <b>Word (.doc)</b>, <b>Apple Pages (.rtf)</b>, <b>PDF</b>, or <b>Print</b>.</li>
+            <li>Generate consolidated reports with admission details and export to <b>CSV</b>, <b>Word (.doc)</b>, <b>Apple Pages (.rtf)</b>, <b>PDF</b>, or <b>Print</b>.</li>
           </ol>
         </div>
       </section>
@@ -82,23 +90,40 @@
         </div>
 
         <div class="card" style="margin-top: 20px;">
-          <h3 id="studentHeading">Enrolled Students</h3>
-          <div style="display: flex; gap: 15px;">
-            <div style="flex: 1;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <h3 id="studentHeading" style="margin-bottom: 0;">Enrolled Students</h3>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none;" onchange="handleCSVUpload(event)">
+              <input type="file" id="pdfFileInput" accept=".pdf,application/pdf" style="display:none;" onchange="handlePDFUpload(event)">
+              
+              <button class="btn btn-secondary" onclick="document.getElementById('csvFileInput').click()">📁 Import CSV</button>
+              <button class="btn btn-secondary" onclick="document.getElementById('pdfFileInput').click()">📄 Import PDF</button>
+            </div>
+          </div>
+
+          <!-- Add Student Form -->
+          <div style="display: grid; grid-template-columns: 200px 1fr auto; gap: 15px; margin-top: 16px;">
+            <div>
+              <label>ADMISSION NO.</label>
+              <input id="studentAdm" class="input-control" placeholder="e.g. ADM2026101">
+            </div>
+            <div>
               <label>FULL STUDENT NAME</label>
-              <input id="studentName" class="input-control" placeholder="Enter student full name">
+              <input id="studentName" class="input-control" placeholder="Enter student full name" onkeydown="if(event.key==='Enter') addStudent()">
             </div>
             <div style="display:flex; align-items:flex-end;">
               <button class="btn btn-primary" style="padding: 10px 24px;" onclick="addStudent()">+ Save Student</button>
             </div>
           </div>
+
           <div class="table-container" style="margin-top: 20px;">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th class="text-center" style="width: 70px;">S.No</th>
-                  <th class="text-left">Student Name</th>
-                  <th style="text-align:right; width: 120px;">Action</th>
+                  <th class="text-center" style="width: 60px;">S.No</th>
+                  <th class="text-center" style="width: 150px;">Admission No.</th>
+                  <th class="text-left">Name of the Student</th>
+                  <th style="text-align:center; width: 160px;">Action</th>
                 </tr>
               </thead>
               <tbody id="students"></tbody>

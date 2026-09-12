@@ -40,6 +40,7 @@ body {
   flex-direction: column;
   position: fixed;
   height: 100vh;
+  z-index: 10;
 }
 
 .brand {
@@ -192,7 +193,7 @@ label {
   font-size: 14px;
   outline: none;
   background: #f8fafc;
-  transition: border 0.2s;
+  transition: border 0.2s, background-color 0.2s;
 }
 
 .input-control:focus {
@@ -200,7 +201,6 @@ label {
   background: #fff;
 }
 
-/* Input Validation Error State */
 .input-control.input-error {
   border-color: var(--danger-color) !important;
   background-color: #fef2f2 !important;
@@ -216,6 +216,9 @@ label {
   font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-primary { background: var(--primary-color); color: #fff; }
@@ -223,6 +226,7 @@ label {
 .btn-success { background: var(--success-color); color: #fff; }
 .btn-danger { background: var(--danger-color); color: #fff; }
 .btn-secondary { background: #e2e8f0; color: #334155; }
+.btn-secondary:hover { background: #cbd5e1; }
 
 .action-bar {
   display: flex;
@@ -284,9 +288,10 @@ label {
 }
 
 .data-table td {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border-color);
   border-right: 1px solid var(--border-color);
+  vertical-align: middle;
 }
 
 .data-table th:last-child,
@@ -304,6 +309,13 @@ label {
 .data-table th.text-left,
 .data-table td.text-left {
   text-align: left;
+}
+
+/* Inline Edit Field in Student Table */
+.edit-box {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 /* Grade Badges */
@@ -328,7 +340,7 @@ label {
 .fail-text { color: var(--danger-color); font-weight: 700; }
 .ab-text   { color: var(--danger-color); font-weight: 700; }
 
-.hidden { display: none; }
+.hidden { display: none !important; }
 
 /* Report Paper - With Full 4-Sided Frame */
 .report-paper {
@@ -336,10 +348,9 @@ label {
   padding: 24px 20px;
   border-radius: 4px;
   box-shadow: var(--shadow);
-  border: 2px solid #0f172a; /* 4-sided outer frame */
+  border: 2px solid #0f172a;
 }
 
-/* Full Borders on Table Cells */
 .report-paper .data-table {
   border: 1px solid #334155;
 }
@@ -384,6 +395,7 @@ label {
   border-radius: 8px;
   font-size: 14px;
   display: none;
+  z-index: 1000;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
@@ -409,7 +421,7 @@ label {
   }
   
   .report-paper { 
-    border: 2px solid #000 !important; /* Outer 4-sided frame for print */
+    border: 2px solid #000 !important;
     box-shadow: none !important; 
     padding: 18px 16px !important; 
     border-radius: 0 !important;
