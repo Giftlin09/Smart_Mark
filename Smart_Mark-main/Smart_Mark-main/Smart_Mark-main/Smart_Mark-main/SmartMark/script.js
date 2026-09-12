@@ -14,7 +14,7 @@ if (!data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-let current = { class: "7", section: "B", exam: "", year: "2026-27" };
+let current = { class: "1", section: "A", exam: "", year: "2026-27" };
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -739,7 +739,7 @@ function clearCurrentMarks() {
 }
 
 // -------------------------------------------------------------
-// CONSOLIDATED REGISTER (PEPS SCHOOL HEADER & DYNAMIC SUBJECTS)
+// CONSOLIDATED REGISTER
 // -------------------------------------------------------------
 
 function renderConsolidatedSheet() {
@@ -760,7 +760,6 @@ function renderConsolidatedSheet() {
     return;
   }
 
-  // Retrieve all subject exams registered under this Class, Section, and Exam Name
   const k = getKey(c, s);
   const subjectExams = Object.values(data.exams).filter(e => e.classKey === k && e.name === examName);
 
@@ -770,74 +769,318 @@ function renderConsolidatedSheet() {
     return;
   }
 
-  // 1. Multi-Subject Dual Headers
+  // 1. Build Table Headers: Frozen 3 ID Columns + Internal/Raw Marks + Overall Total (/100), Grade, Result
   let headerTop = `
     <tr class="con-head-dark">
-      <th style="width: 50px; text-align: center;">S.No</th>
-      <th style="width: 120px; text-align: center;">Adm No</th>
-      <th style="min-width: 150px; text-align: left;">Student Name</th>
+      <th class="con-sticky-1" style="width: 36px; min-width: 36px; text-align: center;" rowspan="2">S.No</th>
+      <th class="con-sticky-2" style="width: 110px; min-width: 110px; text-align: center;" rowspan="2">Adm No.</th>
+      <th class="con-sticky-3" style="width: 160px; min-width: 160px; text-align: left;" rowspan="2">Name of the Student</th>
   `;
 
-  let headerSub = `
-    <tr class="con-head-sub">
-      <th colspan="3" style="background:#1e293b;"></th>
-  `;
+  let headerSub = `<tr class="con-head-sub">`;
 
   subjectExams.forEach(ex => {
-    headerTop += `<th colspan="2" style="text-align: center;">${escapeHtml(ex.subject)}</th>`;
-    headerSub += `
-      <th style="width: 75px; text-align: center;">Raw(/${ex.max})</th>
-      <th style="width: 65px; text-align: center;">/100</th>
-    `;
+    if (ex.pattern === "term") {
+      headerTop += `<th colspan="7" style="text-align: center;">${escapeHtml(ex.subject)}</th>`;
+      headerSub += `
+        <th style="width: 38px;">NBS</th>
+        <th style="width: 38px;">SE</th>
+        <th style="width: 38px;">T</th>
+        <th style="width: 50px;">Exam</th>
+        <th style="width: 50px;">Total</th>
+        <th style="width: 48px;">/100</th>
+        <th style="width: 45px;">Grade</th>
+      `;
+    } else {
+      headerTop += `<th colspan="3" style="text-align: center;">${escapeHtml(ex.subject)}</th>`;
+      headerSub += `
+        <th style="width: 55px;">Raw</th>
+        <th style="width: 50px;">/100</th>
+        <th style="width: 45px;">Grade</th>
+      `;
+    }
   });
 
-  headerTop += `</tr>`;
-  headerSub += `</tr>`;
+  // End Columns: Only Total (/100), Grade, Result
+  headerTop += `
+      <th colspan="3" style="text-align: center; background:#f1f5f9;">Overall Performance</th>
+    </tr>
+  `;
+  headerSub += `
+      <th style="width: 70px; text-align: center;">Total (/100)</th>
+      <th style="width: 55px; text-align: center;">Grade</th>
+      <th style="width: 65px; text-align: center;">Result</th>
+    </tr>
+  `;
+
   thead.innerHTML = headerTop + headerSub;
 
-  // 2. Table Rows
+  const subStats = {};
+  subjectExams.forEach(ex => {
+    subStats[ex.subject] = { sumScaled: 0, count: 0 };
+  });
+  let overallStudentPercentages = [];
+
+  // 2. Student Rows
   tbody.innerHTML = students.map((st, i) => {
-    let rowHtml = `
-      <tr>
-        <td class="text-center" style="color:var(--text-muted); font-size:12px;">${i + 1}</td>
-        <td class="text-center" style="font-size:12px; font-weight:600; color:#334155;">${escapeHtml(st.admissionNo || '-')}</td>
-        <td class="text-left"><b>${escapeHtml(st.name)}</b></td>
-    `;
+    let studentHasAnyEntry = false;
+    let studentScores100 = [];
+    let isStudentFailedInAnySubject = false;
+    let attendedAnySubject = false;
+    let subjectCellsHtml = "";
 
     subjectExams.forEach(ex => {
-      let rawVal = "-";
-      let scaledVal = "-";
+      let subGrade = "-";
+      let isSubjectFail = false;
       let entry = ex.marks[st.id];
 
-      if (entry !== undefined && entry !== null && entry !== "") {
-        if (ex.pattern === "term") {
+      if (ex.pattern === "term") {
+        let nbsVal = "-", seVal = "-", tVal = "-", eVal = "-", totVal = "-", sc100Val = "-";
+        if (entry !== undefined && entry !== null && entry !== "") {
+          studentHasAnyEntry = true;
           let termObj = typeof entry === "object" ? entry : { nbs: "", se: "", t: "", e: entry };
           let resData = calculateTermScore(termObj, ex.max);
-          rawVal = resData.totalStr || "-";
-          scaledVal = typeof resData.total === "number" ? formatNum(resData.total) : (resData.total || "-");
-        } else {
+
+          nbsVal = termObj.nbs !== "" && termObj.nbs !== undefined ? termObj.nbs : "-";
+          seVal = termObj.se !== "" && termObj.se !== undefined ? termObj.se : "-";
+          tVal = termObj.t !== "" && termObj.t !== undefined ? termObj.t : "-";
+          eVal = termObj.e !== "" && termObj.e !== undefined ? termObj.e : "-";
+          totVal = resData.totalStr || "-";
+
+          if (typeof resData.total === "number") {
+            attendedAnySubject = true;
+            sc100Val = formatNum(resData.total);
+            subGrade = resData.grade || "-";
+            studentScores100.push(resData.total);
+            subStats[ex.subject].sumScaled += resData.total;
+            subStats[ex.subject].count++;
+
+            if (resData.total < 35) {
+              isSubjectFail = true;
+              isStudentFailedInAnySubject = true;
+            }
+          } else if (resData.total === "AB") {
+            sc100Val = "AB";
+            subGrade = "-";
+          }
+        }
+
+        // Highlight failing mark cells in soft red
+        let failMarkClass = isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"';
+        subjectCellsHtml += `
+          <td class="text-center">${nbsVal}</td>
+          <td class="text-center">${seVal}</td>
+          <td class="text-center">${tVal}</td>
+          <td class="text-center">${eVal}</td>
+          <td ${failMarkClass}>${totVal}</td>
+          <td ${failMarkClass}><b>${sc100Val}</b></td>
+          <td class="text-center"><b>${subGrade}</b></td>
+        `;
+
+      } else {
+        let rawVal = "-", scaledVal = "-";
+        if (entry !== undefined && entry !== null && entry !== "") {
+          studentHasAnyEntry = true;
           let rawStr = String(entry).trim().toUpperCase();
           if (rawStr === "AB") {
             rawVal = "AB";
             scaledVal = "AB";
+            subGrade = "-";
           } else if (!isNaN(rawStr)) {
-            let [sc100] = calculateGrade(+rawStr, ex.max);
+            attendedAnySubject = true;
+            let [sc100, gr] = calculateGrade(+rawStr, ex.max);
             rawVal = rawStr;
             scaledVal = formatNum(sc100);
+            subGrade = gr;
+            studentScores100.push(sc100);
+            subStats[ex.subject].sumScaled += sc100;
+            subStats[ex.subject].count++;
+
+            if (sc100 < 35) {
+              isSubjectFail = true;
+              isStudentFailedInAnySubject = true;
+            }
           }
         }
-      }
 
-      rowHtml += `
-        <td class="text-center" style="font-weight:600; color:#475569;">${rawVal}</td>
-        <td class="text-center" style="font-weight:700; color:#0f172a;">${scaledVal}</td>
-      `;
+        let failMarkClass = isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"';
+        subjectCellsHtml += `
+          <td ${failMarkClass}>${rawVal}</td>
+          <td ${failMarkClass}><b>${scaledVal}</b></td>
+          <td class="text-center"><b>${subGrade}</b></td>
+        `;
+      }
     });
 
-    rowHtml += `</tr>`;
-    return rowHtml;
+    // 3. Overall Performance Calculation
+    let finalScaledStr = "-";
+    let finalGradeStr = "-";
+    let finalResultStr = "-";
+    let resultCellClass = "text-center";
+
+    // Detect if student was absent in all exams
+    const isAllAbsent = studentHasAnyEntry && !attendedAnySubject;
+
+    if (isAllAbsent) {
+      finalScaledStr = "AB";
+      finalGradeStr = "-";
+      finalResultStr = `<span class="ab-text">AB</span>`;
+      // NO highlights when AB in all exams
+    } else if (studentScores100.length > 0) {
+      let avgScaled = studentScores100.reduce((a, b) => a + b, 0) / studentScores100.length;
+      overallStudentPercentages.push(avgScaled);
+
+      finalScaledStr = formatNum(avgScaled);
+      let [, oGrade] = calculateGrade(avgScaled, 100);
+      finalGradeStr = `<b>${oGrade}</b>`;
+
+      let passed = !isStudentFailedInAnySubject && (studentScores100.length === subjectExams.length);
+      if (passed) {
+        finalResultStr = `<span class="pass-text">Pass</span>`;
+      } else {
+        finalResultStr = `<span class="fail-text">Fail</span>`;
+        resultCellClass = "text-center cell-fail-highlight";
+      }
+    }
+
+    // Highlight student name in soft red ONLY if failed (never if all absent)
+    const nameCellClass = (isStudentFailedInAnySubject && !isAllAbsent)
+      ? "text-left con-sticky-3 student-fail-highlight"
+      : "text-left con-sticky-3";
+
+    return `
+      <tr>
+        <td class="text-center con-sticky-1" style="color:var(--text-muted); font-size:11px;">${i + 1}</td>
+        <td class="text-center con-sticky-2" style="font-size:11px; font-weight:600; color:#475569;">${escapeHtml(st.admissionNo || '-')}</td>
+        <td class="${nameCellClass}">${escapeHtml(st.name)}</td>
+        ${subjectCellsHtml}
+        <td class="text-center" style="font-weight:800;">${finalScaledStr}</td>
+        <td class="text-center">${finalGradeStr}</td>
+        <td class="${resultCellClass}">${finalResultStr}</td>
+      </tr>
+    `;
   }).join("");
+
+  // 4. Bottom Subject Averages Row
+  let overallAvgPct = overallStudentPercentages.length > 0
+    ? formatNum(overallStudentPercentages.reduce((a, b) => a + b, 0) / overallStudentPercentages.length)
+    : "0";
+
+  let avgRowHtml = `
+    <tr style="background:#f8fafc; font-weight:800; border-top: 2px solid #334155;">
+      <td colspan="3" class="text-center con-sticky-1" style="letter-spacing:0.5px; color:#0f172a; font-size:11px; z-index:3; background:#f8fafc; border-right:2px solid #94a3b8 !important;"><b>SUBJECT AVERAGE (/100)</b></td>
+  `;
+
+  subjectExams.forEach(ex => {
+    let stat = subStats[ex.subject];
+    let avgScaled = stat.count > 0 ? formatNum(stat.sumScaled / stat.count) : "-";
+    let [, gr] = stat.count > 0 ? calculateGrade(+(stat.sumScaled / stat.count), 100) : ["", "-"];
+    let colSpan = ex.pattern === "term" ? 7 : 3;
+
+    avgRowHtml += `
+      <td colspan="${colSpan}" class="text-center" style="color:#0f172a;">
+        <b>${avgScaled !== '-' ? avgScaled + '%' : '-'}</b> ${gr && gr !== '-' ? `(${gr})` : ''}
+      </td>
+    `;
+  });
+
+  avgRowHtml += `
+      <td class="text-center" style="font-weight:800; background:#f1f5f9; color:#0284c7;">${overallAvgPct}%</td>
+      <td class="text-center" colspan="2" style="background:#f1f5f9;">—</td>
+    </tr>
+  `;
+
+  tbody.innerHTML += avgRowHtml;
 }
+
+function deleteSelectedExam() {
+  const c = document.getElementById("conClass").value || current.class;
+  const s = document.getElementById("conSection").value || current.section;
+  const examName = document.getElementById("conExamSel").value;
+
+  if (!examName || examName === "No Exams Recorded") {
+    return toast("No valid exam selected to delete.", true);
+  }
+
+  const confirmed = confirm(`Permanently delete exam "${examName}" and all its subject marks for Class ${c}-${s}?`);
+  if (!confirmed) return;
+
+  const k = getKey(c, s);
+  Object.keys(data.exams).forEach(id => {
+    const ex = data.exams[id];
+    if (ex.classKey === k && ex.name === examName) {
+      delete data.exams[id];
+    }
+  });
+
+  save();
+  populateDropdowns();
+  renderConsolidatedSheet();
+  toast(`Exam "${examName}" deleted.`);
+}
+
+function deleteReportExam() {
+  const c = document.getElementById("repClass").value || current.class;
+  const s = document.getElementById("repSection").value || current.section;
+  const examName = document.getElementById("repExam").value;
+
+  if (!examName || examName === "Select Exam" || examName === "") {
+    return toast("No exam selected to delete.", true);
+  }
+
+  const confirmed = confirm(`Are you sure you want to permanently delete "${examName}" for Class ${c}-${s}?`);
+  if (!confirmed) return;
+
+  const k = getKey(c, s);
+
+  Object.keys(data.exams).forEach(id => {
+    const ex = data.exams[id];
+    if (ex.classKey === k && ex.name === examName) {
+      delete data.exams[id];
+    }
+  });
+
+  save();
+  populateDropdowns();
+
+  const page = document.getElementById("reportPage");
+  if (page) {
+    page.innerHTML = "<p style='text-align:center; padding: 20px; color: var(--text-muted);'>Exam deleted. Please select another exam and click Generate Preview.</p>";
+  }
+
+  toast(`Exam "${examName}" deleted successfully.`);
+}
+
+function deleteSummaryExam() {
+  const c = document.getElementById("sumClass").value || current.class;
+  const s = document.getElementById("sumSection").value || current.section;
+  const examName = document.getElementById("sumExam").value;
+
+  if (!examName || examName === "Select Exam" || examName === "") {
+    return toast("No exam selected to delete.", true);
+  }
+
+  const confirmed = confirm(`Are you sure you want to permanently delete "${examName}" for Class ${c}-${s}?`);
+  if (!confirmed) return;
+
+  const k = getKey(c, s);
+
+  Object.keys(data.exams).forEach(id => {
+    const ex = data.exams[id];
+    if (ex.classKey === k && ex.name === examName) {
+      delete data.exams[id];
+    }
+  });
+
+  save();
+  populateDropdowns();
+  renderSummary();
+  toast(`Exam "${examName}" deleted successfully.`);
+}
+
+// -------------------------------------------------------------
+// CONSOLIDATED EXPORT SUITE: CSV, WORD, PAGES (.RTF), PDF
+// -------------------------------------------------------------
 
 function exportConsolidatedCSV() {
   const c = document.getElementById("conClass").value || current.class;
@@ -847,40 +1090,78 @@ function exportConsolidatedCSV() {
 
   const k = getKey(c, s);
   const subjectExams = Object.values(data.exams).filter(e => e.classKey === k && e.name === examName);
-
   if (subjectExams.length === 0) return alert("No subject data available to export.");
 
   let csv = `PEARLS PUBLIC SCHOOL (CBSE) - Class ${c}-${s} ${examName} Consolidated Marksheet\n`;
-  csv += `S.No,Admission No,Student Name,` + subjectExams.map(ex => `"${ex.subject} Raw(/${ex.max})","${ex.subject} (/100)"`).join(",") + `\n`;
+  csv += `S.No,Admission No,Student Name,` + 
+         subjectExams.map(ex => {
+           return ex.pattern === "term"
+             ? `"${ex.subject} NBS","${ex.subject} SE","${ex.subject} T","${ex.subject} Exam","${ex.subject} Total","${ex.subject} /100","${ex.subject} Grade"`
+             : `"${ex.subject} Raw(/${ex.max})","${ex.subject} /100","${ex.subject} Grade"`;
+         }).join(",") + `,"Total (/100)","Overall Grade","Result"\n`;
 
   students.forEach((st, i) => {
     let row = `"${i + 1}","${st.admissionNo || ''}","${st.name}"`;
-    subjectExams.forEach(ex => {
-      let rawVal = "";
-      let scaledVal = "";
-      let entry = ex.marks[st.id];
+    let studentScores100 = [];
+    let isStudentFailedInAnySubject = false;
+    let allExamsAbsent = true;
 
-      if (entry !== undefined && entry !== null && entry !== "") {
-        if (ex.pattern === "term") {
+    subjectExams.forEach(ex => {
+      let entry = ex.marks[st.id];
+      if (ex.pattern === "term") {
+        let nbs = "", se = "", t = "", e = "", tot = "", sc100 = "", gr = "";
+        if (entry) {
           let termObj = typeof entry === "object" ? entry : { nbs: "", se: "", t: "", e: entry };
           let resData = calculateTermScore(termObj, ex.max);
-          rawVal = resData.totalStr;
-          scaledVal = typeof resData.total === "number" ? formatNum(resData.total) : resData.total;
-        } else {
-          let rawStr = String(entry).trim().toUpperCase();
-          if (rawStr === "AB") {
-            rawVal = "AB";
-            scaledVal = "AB";
-          } else if (!isNaN(rawStr)) {
-            let [sc100] = calculateGrade(+rawStr, ex.max);
-            rawVal = rawStr;
-            scaledVal = formatNum(sc100);
+          nbs = termObj.nbs ?? "";
+          se = termObj.se ?? "";
+          t = termObj.t ?? "";
+          e = termObj.e ?? "";
+          tot = resData.totalStr ?? "";
+          if (typeof resData.total === "number") {
+            allExamsAbsent = false;
+            sc100 = formatNum(resData.total);
+            gr = resData.grade;
+            studentScores100.push(resData.total);
+            if (resData.total < 35) isStudentFailedInAnySubject = true;
+          } else if (resData.total === "AB") {
+            sc100 = "AB";
           }
         }
+        row += `,"${nbs}","${se}","${t}","${e}","${tot}","${sc100}","${gr}"`;
+      } else {
+        let raw = "", sc100 = "", gr = "";
+        if (entry) {
+          let rawStr = String(entry).trim().toUpperCase();
+          if (rawStr === "AB") {
+            raw = "AB"; sc100 = "AB";
+          } else if (!isNaN(rawStr)) {
+            allExamsAbsent = false;
+            let [converted, grade] = calculateGrade(+rawStr, ex.max);
+            raw = rawStr;
+            sc100 = formatNum(converted);
+            gr = grade;
+            studentScores100.push(converted);
+            if (converted < 35) isStudentFailedInAnySubject = true;
+          }
+        }
+        row += `,"${raw}","${sc100}","${gr}"`;
       }
-      row += `,"${rawVal}","${scaledVal}"`;
     });
-    csv += row + `\n`;
+
+    let finalScaled = "", finalGrade = "", finalRes = "";
+    if (allExamsAbsent) {
+      finalScaled = "AB"; finalRes = "AB";
+    } else if (studentScores100.length) {
+      let avg = studentScores100.reduce((a, b) => a + b, 0) / studentScores100.length;
+      finalScaled = formatNum(avg);
+      let [, g] = calculateGrade(avg, 100);
+      finalGrade = g;
+      finalRes = (!isStudentFailedInAnySubject && studentScores100.length === subjectExams.length) ? "Pass" : "Fail";
+    }
+
+    row += `,"${finalScaled}","${finalGrade}","${finalRes}"\n`;
+    csv += row;
   });
 
   const uri = encodeURI("data:text/csv;charset=utf-8," + csv);
@@ -892,8 +1173,175 @@ function exportConsolidatedCSV() {
   document.body.removeChild(link);
 }
 
+function exportConsolidatedWord() {
+  const content = document.getElementById('conPrintWrapper');
+  const c = document.getElementById("conClass").value || current.class;
+  const s = document.getElementById("conSection").value || current.section;
+  const examName = document.getElementById("conExamSel").value;
+
+  if (!content || !content.innerHTML.trim()) return alert("No table available to export.");
+
+  const htmlContent = `
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head>
+      <meta charset='utf-8'>
+      <title>Consolidated Marksheet</title>
+      <style>
+        body { font-family: 'Calibri', Arial, sans-serif; font-size: 9.5pt; }
+        .word-frame { border: 2px solid #000; padding: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th { background-color: #f1f5f9; font-weight: bold; border: 1px solid #000; padding: 4px; font-size: 8.5pt; text-align: center; }
+        td { border: 1px solid #000; padding: 3px; font-size: 8.5pt; }
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .pass-text { color: #10b981; font-weight: bold; }
+        .fail-text { color: #ef4444; font-weight: bold; }
+        .ab-text { color: #64748b; font-weight: bold; }
+        .student-fail-highlight { background-color: #fef2f2 !important; color: #000000 !important; font-weight: bold; }
+        .cell-fail-highlight { background-color: #fee2e2 !important; color: #dc2626 !important; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="word-frame">
+        ${content.innerHTML}
+      </div>
+    </body>
+    </html>
+  `;
+
+  const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `Consolidated_Class_${c}${s}_${examName}.doc`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function exportConsolidatedPages() {
+  const c = document.getElementById("conClass").value || current.class;
+  const s = document.getElementById("conSection").value || current.section;
+  const examName = document.getElementById("conExamSel").value;
+  const students = getClassObj(c, s).students;
+
+  const k = getKey(c, s);
+  const subjectExams = Object.values(data.exams).filter(e => e.classKey === k && e.name === examName);
+  if (subjectExams.length === 0) return alert("Select an exam with records first.");
+
+  let rtf = "{\\rtf1\\ansi\\deff0\n";
+  rtf += "{\\fonttbl{\\f0 Arial;}}\n";
+  rtf += "{\\colortbl ;\\red0\\green128\\blue0;\\red220\\green38\\blue38;\\red100\\green116\\blue139;}\n";
+  rtf += "\\viewkind4\\uc1\\pard\\qc\\b\\fs26 PEARLS PUBLIC SCHOOL (CBSE)\\par\\b0\n";
+  rtf += `\\fs18 Class ${c}-${s} | Academic Year: 2026-27 | Exam: ${examName} [Consolidated Marksheet]\\par\\par\n`;
+
+  // Headers
+  rtf += "\\trowd\\trgaph50\\cellx500\\cellx1800\\cellx4000";
+  let cellPos = 4000;
+  subjectExams.forEach(() => {
+    cellPos += 1200; rtf += `\\cellx${cellPos}`;
+  });
+  cellPos += 1200; rtf += `\\cellx${cellPos}`;
+  cellPos += 900; rtf += `\\cellx${cellPos}`;
+  cellPos += 900; rtf += `\\cellx${cellPos}\n`;
+
+  rtf += "\\intbl\\b S.No\\cell Adm No\\cell Student Name";
+  subjectExams.forEach(ex => { rtf += `\\cell ${ex.subject} (/100)`; });
+  rtf += "\\cell Total (/100)\\cell Grade\\cell Result\\cell\\row\\b0\n";
+
+  // Rows
+  students.forEach((st, i) => {
+    let studentScores100 = [];
+    let isFail = false;
+    let allAB = true;
+
+    let rowData = `\\intbl ${i + 1}\\cell ${st.admissionNo || '-'}\\cell ${st.name}`;
+    subjectExams.forEach(ex => {
+      let entry = ex.marks[st.id];
+      let str = "-";
+      if (entry) {
+        if (ex.pattern === "term") {
+          let resData = calculateTermScore(typeof entry === "object" ? entry : { nbs: "", se: "", t: "", e: entry }, ex.max);
+          if (typeof resData.total === "number") {
+            allAB = false;
+            str = `${formatNum(resData.total)} (${resData.grade})`;
+            studentScores100.push(resData.total);
+            if (resData.total < 35) isFail = true;
+          } else if (resData.total === "AB") {
+            str = "AB";
+          }
+        } else {
+          let rawStr = String(entry).trim().toUpperCase();
+          if (rawStr === "AB") {
+            str = "AB";
+          } else if (!isNaN(rawStr)) {
+            allAB = false;
+            let [sc100, gr] = calculateGrade(+rawStr, ex.max);
+            str = `${formatNum(sc100)} (${gr})`;
+            studentScores100.push(sc100);
+            if (sc100 < 35) isFail = true;
+          }
+        }
+      }
+      rowData += `\\cell ${str}`;
+    });
+
+    let finSc = "-", finGr = "-", finRes = "-";
+    if (allAB) {
+      finSc = "AB"; finRes = "\\cf3 AB\\cf0";
+    } else if (studentScores100.length) {
+      let avg = studentScores100.reduce((a, b) => a + b, 0) / studentScores100.length;
+      finSc = formatNum(avg);
+      let [, g] = calculateGrade(avg, 100);
+      finGr = g;
+      let pass = !isFail && studentScores100.length === subjectExams.length;
+      finRes = pass ? "\\cf1 Pass\\cf0" : "\\cf2 Fail\\cf0";
+    }
+
+    rowData += `\\cell ${finSc}\\cell ${finGr}\\cell ${finRes}\\cell\\row\n`;
+    rtf += "\\trowd\\trgaph50\\cellx500\\cellx1800\\cellx4000";
+    let p = 4000;
+    subjectExams.forEach(() => { p += 1200; rtf += `\\cellx${p}`; });
+    p += 1200; rtf += `\\cellx${p}`;
+    p += 900; rtf += `\\cellx${p}`;
+    p += 900; rtf += `\\cellx${p}\n`;
+    rtf += rowData;
+  });
+
+  rtf += "}";
+  const blob = new Blob([rtf], { type: "application/rtf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Consolidated_Class_${c}${s}_${examName}.rtf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function downloadConsolidatedPDF() {
+  const element = document.getElementById('conPrintWrapper');
+  const c = document.getElementById("conClass").value || current.class;
+  const s = document.getElementById("conSection").value || current.section;
+  const examName = document.getElementById("conExamSel").value;
+
+  if (!element) return alert("No table available to export.");
+
+  const opt = {
+    margin:       [0.15, 0.15, 0.15, 0.15],
+    filename:     `Consolidated_Class_${c}${s}_${examName}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+  };
+
+  html2pdf().set(opt).from(element).save();
+}
+
 // -------------------------------------------------------------
-// STATISTICS & REPORTS
+// SINGLE-EXAM REPORTING (PRINT REPORTS TAB)
 // -------------------------------------------------------------
 
 function calculateStatistics(e) {
@@ -1108,7 +1556,7 @@ function renderReport() {
       PEARLS PUBLIC SCHOOL <span style="font-size:13px; font-weight:600;">(CBSE)</span>
     </div>
     <div style="text-align:center; margin-bottom:12px; font-weight:700; font-size:14px; color:var(--text-muted);">
-      Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject}) [${isTerm ? 'Term Pattern' : 'Mid Term Pattern'}]
+      Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject})
     </div>
     
     <table class="data-table print-table">
@@ -1213,9 +1661,7 @@ function exportToWord() {
   }
 
   const htmlContent = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
-          xmlns:w='urn:schemas-microsoft-com:office:word' 
-          xmlns='http://www.w3.org/TR/REC-html40'>
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head>
       <meta charset='utf-8'>
       <title>Academic Report</title>

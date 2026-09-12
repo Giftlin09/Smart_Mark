@@ -30,7 +30,7 @@ body {
   min-height: 100vh;
 }
 
-/* Sidebar Styling */
+/* Sidebar */
 .sidebar {
   width: 260px;
   background-color: var(--sidebar-bg);
@@ -40,7 +40,7 @@ body {
   flex-direction: column;
   position: fixed;
   height: 100vh;
-  z-index: 10;
+  z-index: 20;
 }
 
 .brand {
@@ -152,7 +152,7 @@ body {
   margin-top: 4px;
 }
 
-/* Cards & Layouts */
+/* Cards */
 .card {
   background: var(--card-bg);
   border-radius: var(--radius);
@@ -175,7 +175,6 @@ body {
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
 
-/* Controls & Inputs */
 label {
   display: block;
   font-size: 11px;
@@ -187,10 +186,10 @@ label {
 
 .input-control {
   width: 100%;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   outline: none;
   background: #f8fafc;
   transition: border 0.2s, background-color 0.2s;
@@ -209,7 +208,7 @@ label {
 }
 
 .btn {
-  padding: 9px 16px;
+  padding: 8px 14px;
   border-radius: 7px;
   border: none;
   font-weight: 600;
@@ -220,6 +219,7 @@ label {
   align-items: center;
   justify-content: center;
   gap: 5px;
+  white-space: nowrap;
 }
 
 .btn-primary { background: var(--primary-color); color: #fff; }
@@ -236,7 +236,6 @@ label {
   margin-top: 18px;
 }
 
-/* Statistics Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -265,6 +264,35 @@ label {
   margin-top: 6px;
 }
 
+/* Consolidated Control Layout: Clean Two-Row Structure */
+.con-filter-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.con-controls-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.con-field {
+  flex: 1;
+  min-width: 120px;
+}
+
+.con-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
 /* Data Tables */
 .table-container {
   overflow-x: auto;
@@ -290,7 +318,7 @@ label {
 }
 
 .data-table td {
-  padding: 9px 12px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border-color);
   border-right: 1px solid var(--border-color);
   vertical-align: middle;
@@ -302,43 +330,127 @@ label {
 }
 
 .data-table tbody tr:last-child td { border-bottom: none; }
+.data-table th.text-center, .data-table td.text-center { text-align: center; }
+.data-table th.text-left, .data-table td.text-left { text-align: left; }
 
-.data-table th.text-center,
-.data-table td.text-center {
-  text-align: center;
+/* Sticky Columns for Horizontal Readability in Consolidated Table */
+.con-scroll-container {
+  max-height: 75vh;
+  border: 1px solid #334155;
 }
 
-.data-table th.text-left,
-.data-table td.text-left {
-  text-align: left;
+.con-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  background: #fff;
 }
 
-/* Consolidated Dark Header Layout */
 .con-table thead tr.con-head-dark th {
-  background-color: #0b192c;
-  color: #f8fafc;
+  background-color: #f1f5f9;
+  color: #0f172a;
   font-weight: 700;
-  font-size: 12px;
-  border-color: #1e293b;
-  letter-spacing: 0.3px;
+  font-size: 11px;
+  border-bottom: 1px solid #334155;
+  border-right: 1px solid #cbd5e1;
+  text-align: center;
+  padding: 6px 4px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
 }
 
 .con-table thead tr.con-head-sub th {
-  background-color: #1e293b;
-  color: #94a3b8;
-  font-size: 11px;
+  background-color: #f8fafc;
+  color: #475569;
+  font-size: 10px;
   font-weight: 600;
-  border-color: #334155;
-  padding: 6px 8px;
+  border-bottom: 1px solid #334155;
+  border-right: 1px solid #cbd5e1;
+  padding: 5px 2px;
+  text-align: center;
+  position: sticky;
+  top: 32px;
+  z-index: 5;
 }
 
-/* Grade Badges */
+.con-table td {
+  border-bottom: 1px solid #cbd5e1;
+  border-right: 1px solid #cbd5e1;
+  padding: 5px 4px;
+  font-size: 11px;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+/* Sticky first three identity columns */
+.con-sticky-1 {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: #ffffff;
+}
+.con-sticky-2 {
+  position: sticky;
+  left: 36px;
+  z-index: 2;
+  background-color: #ffffff;
+}
+.con-sticky-3 {
+  position: sticky;
+  left: 146px;
+  z-index: 2;
+  background-color: #ffffff;
+  border-right: 2px solid #94a3b8 !important;
+}
+
+/* Higher z-index for intersection of sticky header and sticky columns */
+.con-table thead tr th.con-sticky-1,
+.con-table thead tr th.con-sticky-2,
+.con-table thead tr th.con-sticky-3 {
+  z-index: 10;
+  background-color: #f1f5f9;
+}
+
+.con-table tbody tr:hover td {
+  background-color: #f8fafc;
+}
+
+.con-table tbody tr:hover td.con-sticky-1,
+.con-table tbody tr:hover td.con-sticky-2,
+.con-table tbody tr:hover td.con-sticky-3 {
+  background-color: #f1f5f9;
+}
+
+/* Student Failed Highlight: Soft Red Background with pure black text */
+.student-fail-highlight {
+  background-color: #fef2f2 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+/* Specific failed mark and result cell highlighter */
+.cell-fail-highlight {
+  background-color: #fee2e2 !important;
+  color: #dc2626 !important;
+  font-weight: 800 !important;
+}
+
+/* Neutral text for AB */
+.ab-text {
+  color: #64748b !important;
+  font-weight: 700;
+}
+
+.pass-text { color: var(--success-color); font-weight: 700; }
+.fail-text { color: var(--danger-color); font-weight: 700; }
+
 .badge {
   display: inline-block;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 2px 4px;
+  border-radius: 4px;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .badge-a1 { background: #dcfce7; color: #15803d; }
@@ -349,10 +461,6 @@ label {
 .badge-c2 { background: #fee2e2; color: #b91c1c; }
 .badge-d  { background: #f3e8ff; color: #6b21a8; }
 .badge-e1, .badge-e2 { background: #fecdd3; color: #9f1239; }
-
-.pass-text { color: var(--success-color); font-weight: 700; }
-.fail-text { color: var(--danger-color); font-weight: 700; }
-.ab-text   { color: var(--danger-color); font-weight: 700; }
 
 .hidden { display: none !important; }
 
@@ -365,10 +473,7 @@ label {
   border: 2px solid #0f172a;
 }
 
-.report-paper .data-table {
-  border: 1px solid #334155;
-}
-
+.report-paper .data-table { border: 1px solid #334155; }
 .report-paper .data-table th {
   padding: 7px 6px;
   font-size: 12px;
@@ -376,22 +481,15 @@ label {
   border-right: 1px solid #334155;
   background-color: #f1f5f9;
 }
-
 .report-paper .data-table td {
   padding: 6px 6px;
   font-size: 12px;
   border-bottom: 1px solid #cbd5e1;
   border-right: 1px solid #cbd5e1;
 }
-
 .report-paper .data-table th:last-child,
-.report-paper .data-table td:last-child {
-  border-right: none;
-}
-
-.report-paper .data-table tbody tr:last-child td {
-  border-bottom: none;
-}
+.report-paper .data-table td:last-child { border-right: none; }
+.report-paper .data-table tbody tr:last-child td { border-bottom: none; }
 
 .guide-list {
   padding-left: 20px;
@@ -416,42 +514,32 @@ label {
 /* Print Optimization */
 @media print {
   @page {
-    margin: 8mm;
+    margin: 6mm;
     size: landscape;
   }
-  
-  body {
-    background: #fff;
-  }
-
+  body { background: #fff; }
   .sidebar, .no-print, .page-header, .card.no-print, .toast { 
     display: none !important; 
   }
-  
   .main-content { 
     margin: 0 !important; 
     width: 100% !important; 
     padding: 0 !important; 
   }
-
-  .con-table {
-    border: 1.5px solid #000 !important;
+  .con-scroll-container {
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    padding: 0 !important;
   }
-
+  .con-table { border: 1.5px solid #000 !important; }
   .con-table th, .con-table td {
     border: 1px solid #000 !important;
-    padding: 5px !important;
-    font-size: 10px !important;
+    padding: 3px 2px !important;
+    font-size: 9px !important;
     color: #000 !important;
+    position: static !important;
   }
-
-  .con-table thead tr.con-head-dark th {
-    background-color: #f1f5f9 !important;
-    color: #000 !important;
-  }
-
-  .con-table thead tr.con-head-sub th {
-    background-color: #e2e8f0 !important;
-    color: #000 !important;
-  }
+  .con-table thead tr.con-head-dark th { background-color: #f1f5f9 !important; }
+  .con-table thead tr.con-head-sub th { background-color: #e2e8f0 !important; }
 }
