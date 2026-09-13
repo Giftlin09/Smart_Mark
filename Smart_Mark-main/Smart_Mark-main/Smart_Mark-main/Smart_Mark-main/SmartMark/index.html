@@ -61,9 +61,9 @@
           <ol class="guide-list">
             <li>Classes <b>1 through 12</b> are available in the dropdowns.</li>
             <li>Add students under <b>Classes &amp; Roster</b> or import via CSV/PDF with Admission Numbers.</li>
-            <li>Enter marks for each subject in <b>Mark Entry</b>. Term pattern supports internal assessment marks (NBS, SE, T).</li>
-            <li>Use <b>Grade Analytics</b> and <b>Print Reports</b> for single-subject breakdowns.</li>
-            <li>Use <b>Consolidated Sheet</b> for the multi-subject register table with internal marks, auto-scaling to 100, subject averages, fail highlights, and document exports.</li>
+            <li>Enter marks for each subject in <b>Mark Entry</b>. Term pattern supports internal marks (NBS, SE, T).</li>
+            <li>Use <b>Print Reports</b> for single-subject individual report cards.</li>
+            <li>Use <b>Consolidated Sheet</b> to view all subjects side-by-side with automatic totals based on the number of subjects, subject averages, and clear fail highlighting.</li>
           </ol>
         </div>
       </section>
@@ -314,8 +314,8 @@
           </div>
         </div>
 
-        <!-- Consolidated Register Table with Top School Header Inside Container -->
-        <div class="table-container con-scroll-container" id="conPrintWrapper" style="background:#ffffff; padding: 12px;">
+        <!-- Consolidated Register Table with Top School Header and Bottom Stats Inside Container -->
+        <div class="table-container con-scroll-container" id="conPrintWrapper" style="background:#ffffff; padding: 14px;">
           <div style="text-align:center; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0; margin-bottom: 12px;">
             <div style="font-weight:800; font-size:20px; color:#1e293b; letter-spacing:0.5px;">
               PEARLS PUBLIC SCHOOL <span style="font-size:14px; font-weight:700; color:#3b82f6;">(CBSE)</span>
@@ -329,6 +329,9 @@
             <thead id="conTableHead"></thead>
             <tbody id="conTableBody"></tbody>
           </table>
+
+          <!-- Bottom Metric Badges Row -->
+          <div id="conFooterStats" style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 14px; padding-top: 10px; border-top: 1px solid #f1f5f9; flex-wrap: wrap;"></div>
         </div>
       </section>
     </main>

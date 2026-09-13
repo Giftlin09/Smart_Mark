@@ -751,12 +751,14 @@ function renderConsolidatedSheet() {
   const thead = document.getElementById("conTableHead");
   const tbody = document.getElementById("conTableBody");
   const subHeader = document.getElementById("conSchoolSubHeader");
+  const footerStats = document.getElementById("conFooterStats");
 
   subHeader.textContent = `Class ${c}-${s} | Academic Year: 2026-27 | Exam: ${examName || "Term - I"} [Consolidated]`;
 
   if (!examName || examName === "No Exams Recorded") {
     thead.innerHTML = `<tr><th class="text-center">No examination entries saved for Class ${c}-${s}.</th></tr>`;
-    tbody.innerHTML = `<tr><td class="text-center" style="padding: 24px; color: var(--text-muted);">Please enter subject scores under <b>Mark Entry</b> first.</td></tr>`;
+    tbody.innerHTML = `<tr><td class="text-center" style="padding: 20px; color: var(--text-muted);">Please enter subject scores under <b>Mark Entry</b> first.</td></tr>`;
+    if (footerStats) footerStats.innerHTML = "";
     return;
   }
 
@@ -765,16 +767,19 @@ function renderConsolidatedSheet() {
 
   if (subjectExams.length === 0) {
     thead.innerHTML = `<tr><th class="text-center">No subject entries found for ${examName}.</th></tr>`;
-    tbody.innerHTML = `<tr><td class="text-center" style="padding: 24px; color: var(--text-muted);">Enter subject marks under Mark Entry.</td></tr>`;
+    tbody.innerHTML = `<tr><td class="text-center" style="padding: 20px; color: var(--text-muted);">Enter subject marks under Mark Entry.</td></tr>`;
+    if (footerStats) footerStats.innerHTML = "";
     return;
   }
 
-  // 1. Build Table Headers: Frozen 3 ID Columns + Internal/Raw Marks + Overall Total (/100), Grade, Result
+  // Calculate Overall Maximum based on 100 per subject (e.g. 4 subjects = 400, 3 subjects = 300)
+  const totalMaxOverall = subjectExams.length * 100;
+
+  // 1. Build Table Headers: Frozen S.No and Name only (Adm No omitted)
   let headerTop = `
     <tr class="con-head-dark">
-      <th class="con-sticky-1" style="width: 36px; min-width: 36px; text-align: center;" rowspan="2">S.No</th>
-      <th class="con-sticky-2" style="width: 110px; min-width: 110px; text-align: center;" rowspan="2">Adm No.</th>
-      <th class="con-sticky-3" style="width: 160px; min-width: 160px; text-align: left;" rowspan="2">Name of the Student</th>
+      <th class="con-sticky-1" style="width: 32px; min-width: 32px; text-align: center;" rowspan="2">S.No</th>
+      <th class="con-sticky-2" style="width: 140px; min-width: 140px; text-align: left;" rowspan="2">Name of the Student</th>
   `;
 
   let headerSub = `<tr class="con-head-sub">`;
@@ -783,33 +788,32 @@ function renderConsolidatedSheet() {
     if (ex.pattern === "term") {
       headerTop += `<th colspan="7" style="text-align: center;">${escapeHtml(ex.subject)}</th>`;
       headerSub += `
-        <th style="width: 38px;">NBS</th>
-        <th style="width: 38px;">SE</th>
-        <th style="width: 38px;">T</th>
-        <th style="width: 50px;">Exam</th>
-        <th style="width: 50px;">Total</th>
-        <th style="width: 48px;">/100</th>
-        <th style="width: 45px;">Grade</th>
+        <th style="width: 32px;">NBS</th>
+        <th style="width: 32px;">SE</th>
+        <th style="width: 32px;">T</th>
+        <th style="width: 42px;">Exam</th>
+        <th style="width: 42px;">Total</th>
+        <th style="width: 40px;">/100</th>
+        <th style="width: 38px;">Grade</th>
       `;
     } else {
       headerTop += `<th colspan="3" style="text-align: center;">${escapeHtml(ex.subject)}</th>`;
       headerSub += `
-        <th style="width: 55px;">Raw</th>
-        <th style="width: 50px;">/100</th>
-        <th style="width: 45px;">Grade</th>
+        <th style="width: 48px;">Raw</th>
+        <th style="width: 42px;">/100</th>
+        <th style="width: 38px;">Grade</th>
       `;
     }
   });
 
-  // End Columns: Only Total (/100), Grade, Result
+  // End Columns: Only Total (/<totalMaxOverall>) and Result (Grade removed)
   headerTop += `
-      <th colspan="3" style="text-align: center; background:#f1f5f9;">Overall Performance</th>
+      <th colspan="2" style="text-align: center; background:#f1f5f9;">Overall Performance</th>
     </tr>
   `;
   headerSub += `
-      <th style="width: 70px; text-align: center;">Total (/100)</th>
-      <th style="width: 55px; text-align: center;">Grade</th>
-      <th style="width: 65px; text-align: center;">Result</th>
+      <th style="width: 75px; text-align: center;">Total (/${totalMaxOverall})</th>
+      <th style="width: 60px; text-align: center;">Result</th>
     </tr>
   `;
 
@@ -820,6 +824,8 @@ function renderConsolidatedSheet() {
     subStats[ex.subject] = { sumScaled: 0, count: 0 };
   });
   let overallStudentPercentages = [];
+  let studentsPassedCount = 0;
+  let studentsFailedCount = 0;
 
   // 2. Student Rows
   tbody.innerHTML = students.map((st, i) => {
@@ -865,7 +871,7 @@ function renderConsolidatedSheet() {
           }
         }
 
-        // Highlight failing mark cells in soft red
+        // Highlight failing mark cells and grade in soft red
         let failMarkClass = isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"';
         subjectCellsHtml += `
           <td class="text-center">${nbsVal}</td>
@@ -874,7 +880,7 @@ function renderConsolidatedSheet() {
           <td class="text-center">${eVal}</td>
           <td ${failMarkClass}>${totVal}</td>
           <td ${failMarkClass}><b>${sc100Val}</b></td>
-          <td class="text-center"><b>${subGrade}</b></td>
+          <td ${failMarkClass}><b>${subGrade}</b></td>
         `;
 
       } else {
@@ -903,72 +909,67 @@ function renderConsolidatedSheet() {
           }
         }
 
+        // Highlight failing raw, /100, and Grade in soft red
         let failMarkClass = isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"';
         subjectCellsHtml += `
           <td ${failMarkClass}>${rawVal}</td>
           <td ${failMarkClass}><b>${scaledVal}</b></td>
-          <td class="text-center"><b>${subGrade}</b></td>
+          <td ${failMarkClass}><b>${subGrade}</b></td>
         `;
       }
     });
 
-    // 3. Overall Performance Calculation
-    let finalScaledStr = "-";
-    let finalGradeStr = "-";
+    // 3. Overall Performance: Sum of /100 marks out of totalMaxOverall
+    let finalTotalStr = "-";
     let finalResultStr = "-";
     let resultCellClass = "text-center";
 
-    // Detect if student was absent in all exams
     const isAllAbsent = studentHasAnyEntry && !attendedAnySubject;
 
     if (isAllAbsent) {
-      finalScaledStr = "AB";
-      finalGradeStr = "-";
+      finalTotalStr = "AB";
       finalResultStr = `<span class="ab-text">AB</span>`;
-      // NO highlights when AB in all exams
     } else if (studentScores100.length > 0) {
-      let avgScaled = studentScores100.reduce((a, b) => a + b, 0) / studentScores100.length;
+      let sumOfMarks = studentScores100.reduce((a, b) => a + b, 0);
+      let avgScaled = sumOfMarks / studentScores100.length;
       overallStudentPercentages.push(avgScaled);
 
-      finalScaledStr = formatNum(avgScaled);
-      let [, oGrade] = calculateGrade(avgScaled, 100);
-      finalGradeStr = `<b>${oGrade}</b>`;
+      finalTotalStr = formatNum(sumOfMarks);
 
       let passed = !isStudentFailedInAnySubject && (studentScores100.length === subjectExams.length);
       if (passed) {
         finalResultStr = `<span class="pass-text">Pass</span>`;
+        studentsPassedCount++;
       } else {
         finalResultStr = `<span class="fail-text">Fail</span>`;
         resultCellClass = "text-center cell-fail-highlight";
+        studentsFailedCount++;
       }
     }
 
-    // Highlight student name in soft red ONLY if failed (never if all absent)
     const nameCellClass = (isStudentFailedInAnySubject && !isAllAbsent)
-      ? "text-left con-sticky-3 student-fail-highlight"
-      : "text-left con-sticky-3";
+      ? "text-left con-sticky-2 student-fail-highlight"
+      : "text-left con-sticky-2";
 
     return `
       <tr>
         <td class="text-center con-sticky-1" style="color:var(--text-muted); font-size:11px;">${i + 1}</td>
-        <td class="text-center con-sticky-2" style="font-size:11px; font-weight:600; color:#475569;">${escapeHtml(st.admissionNo || '-')}</td>
         <td class="${nameCellClass}">${escapeHtml(st.name)}</td>
         ${subjectCellsHtml}
-        <td class="text-center" style="font-weight:800;">${finalScaledStr}</td>
-        <td class="text-center">${finalGradeStr}</td>
+        <td class="text-center" style="font-weight:800;">${finalTotalStr}</td>
         <td class="${resultCellClass}">${finalResultStr}</td>
       </tr>
     `;
   }).join("");
 
-  // 4. Bottom Subject Averages Row
+  // 4. Bottom Subject Averages Row (colspan 2 for frozen left columns)
   let overallAvgPct = overallStudentPercentages.length > 0
     ? formatNum(overallStudentPercentages.reduce((a, b) => a + b, 0) / overallStudentPercentages.length)
     : "0";
 
   let avgRowHtml = `
     <tr style="background:#f8fafc; font-weight:800; border-top: 2px solid #334155;">
-      <td colspan="3" class="text-center con-sticky-1" style="letter-spacing:0.5px; color:#0f172a; font-size:11px; z-index:3; background:#f8fafc; border-right:2px solid #94a3b8 !important;"><b>SUBJECT AVERAGE (/100)</b></td>
+      <td colspan="2" class="text-center con-sticky-1" style="letter-spacing:0.5px; color:#0f172a; font-size:11px; z-index:3; background:#f8fafc; border-right:2px solid #94a3b8 !important;"><b>SUBJECT AVERAGE (/100)</b></td>
   `;
 
   subjectExams.forEach(ex => {
@@ -986,11 +987,21 @@ function renderConsolidatedSheet() {
 
   avgRowHtml += `
       <td class="text-center" style="font-weight:800; background:#f1f5f9; color:#0284c7;">${overallAvgPct}%</td>
-      <td class="text-center" colspan="2" style="background:#f1f5f9;">—</td>
+      <td class="text-center" style="background:#f1f5f9;">—</td>
     </tr>
   `;
 
   tbody.innerHTML += avgRowHtml;
+
+  // 5. Render Metric Badges at Bottom
+  if (footerStats) {
+    footerStats.innerHTML = `
+      <span class="con-pill con-pill-blue">Total Students: ${students.length}</span>
+      <span class="con-pill con-pill-green">Students Passed: ${studentsPassedCount}</span>
+      <span class="con-pill con-pill-red">Students Failed: ${studentsFailedCount}</span>
+      <span class="con-pill con-pill-amber">Class Average : ${overallAvgPct}%</span>
+    `;
+  }
 }
 
 function deleteSelectedExam() {
@@ -1079,7 +1090,7 @@ function deleteSummaryExam() {
 }
 
 // -------------------------------------------------------------
-// CONSOLIDATED EXPORT SUITE: CSV, WORD, PAGES (.RTF), PDF
+// CONSOLIDATED EXPORT SUITE (ADMISSION NUMBER OMITTED)
 // -------------------------------------------------------------
 
 function exportConsolidatedCSV() {
@@ -1092,16 +1103,18 @@ function exportConsolidatedCSV() {
   const subjectExams = Object.values(data.exams).filter(e => e.classKey === k && e.name === examName);
   if (subjectExams.length === 0) return alert("No subject data available to export.");
 
+  const totalMaxOverall = subjectExams.length * 100;
+
   let csv = `PEARLS PUBLIC SCHOOL (CBSE) - Class ${c}-${s} ${examName} Consolidated Marksheet\n`;
-  csv += `S.No,Admission No,Student Name,` + 
+  csv += `S.No,Student Name,` + 
          subjectExams.map(ex => {
            return ex.pattern === "term"
              ? `"${ex.subject} NBS","${ex.subject} SE","${ex.subject} T","${ex.subject} Exam","${ex.subject} Total","${ex.subject} /100","${ex.subject} Grade"`
              : `"${ex.subject} Raw(/${ex.max})","${ex.subject} /100","${ex.subject} Grade"`;
-         }).join(",") + `,"Total (/100)","Overall Grade","Result"\n`;
+         }).join(",") + `,"Total (/${totalMaxOverall})","Result"\n`;
 
   students.forEach((st, i) => {
-    let row = `"${i + 1}","${st.admissionNo || ''}","${st.name}"`;
+    let row = `"${i + 1}","${st.name}"`;
     let studentScores100 = [];
     let isStudentFailedInAnySubject = false;
     let allExamsAbsent = true;
@@ -1149,18 +1162,16 @@ function exportConsolidatedCSV() {
       }
     });
 
-    let finalScaled = "", finalGrade = "", finalRes = "";
+    let finalTotal = "", finalRes = "";
     if (allExamsAbsent) {
-      finalScaled = "AB"; finalRes = "AB";
+      finalTotal = "AB"; finalRes = "AB";
     } else if (studentScores100.length) {
-      let avg = studentScores100.reduce((a, b) => a + b, 0) / studentScores100.length;
-      finalScaled = formatNum(avg);
-      let [, g] = calculateGrade(avg, 100);
-      finalGrade = g;
+      let sumOfMarks = studentScores100.reduce((a, b) => a + b, 0);
+      finalTotal = formatNum(sumOfMarks);
       finalRes = (!isStudentFailedInAnySubject && studentScores100.length === subjectExams.length) ? "Pass" : "Fail";
     }
 
-    row += `,"${finalScaled}","${finalGrade}","${finalRes}"\n`;
+    row += `,"${finalTotal}","${finalRes}"\n`;
     csv += row;
   });
 
@@ -1181,29 +1192,96 @@ function exportConsolidatedWord() {
 
   if (!content || !content.innerHTML.trim()) return alert("No table available to export.");
 
+  const clone = content.cloneNode(true);
+  clone.querySelectorAll('.con-sticky-1, .con-sticky-2').forEach(el => {
+    el.style.position = 'static';
+  });
+
   const htmlContent = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+          xmlns:w='urn:schemas-microsoft-com:office:word' 
+          xmlns='http://www.w3.org/TR/REC-html40'>
     <head>
       <meta charset='utf-8'>
       <title>Consolidated Marksheet</title>
+      <!--[if gte mso 9]>
+      <xml>
+        <w:WordDocument>
+          <w:View>Print</w:View>
+          <w:Zoom>100</w:Zoom>
+          <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+      </xml>
+      <![endif]-->
       <style>
-        body { font-family: 'Calibri', Arial, sans-serif; font-size: 9.5pt; }
-        .word-frame { border: 2px solid #000; padding: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-        th { background-color: #f1f5f9; font-weight: bold; border: 1px solid #000; padding: 4px; font-size: 8.5pt; text-align: center; }
-        td { border: 1px solid #000; padding: 3px; font-size: 8.5pt; }
-        .text-center { text-align: center; }
-        .text-left { text-align: left; }
-        .pass-text { color: #10b981; font-weight: bold; }
-        .fail-text { color: #ef4444; font-weight: bold; }
-        .ab-text { color: #64748b; font-weight: bold; }
-        .student-fail-highlight { background-color: #fef2f2 !important; color: #000000 !important; font-weight: bold; }
-        .cell-fail-highlight { background-color: #fee2e2 !important; color: #dc2626 !important; font-weight: bold; }
+        @page Section1 {
+          size: 11.69in 8.27in; /* A4 Landscape */
+          margin: 0.4in 0.4in 0.4in 0.4in;
+          mso-page-orientation: landscape;
+          mso-header-margin: 0.3in;
+          mso-footer-margin: 0.3in;
+        }
+        div.Section1 { page: Section1; }
+        body { 
+          font-family: 'Calibri', 'Arial', sans-serif; 
+          font-size: 9pt; 
+          color: #000;
+          background: #fff;
+        }
+        table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          mso-table-lspace: 0pt; 
+          mso-table-rspace: 0pt;
+          margin-top: 8px;
+        }
+        th, td { 
+          border: 1px solid #333333 !important; 
+          padding: 4px 3px !important; 
+          font-size: 8.5pt !important;
+          mso-line-height-rule: exactly;
+          line-height: 11pt;
+          text-align: center;
+        }
+        th { 
+          background-color: #f1f5f9 !important; 
+          font-weight: bold !important; 
+          white-space: nowrap !important;
+        }
+        td.text-left, th.text-left { text-align: left !important; }
+        td.text-center, th.text-center { text-align: center !important; }
+        
+        .student-fail-highlight { 
+          background-color: #fef2f2 !important; 
+          color: #000000 !important; 
+          font-weight: bold !important; 
+        }
+        .cell-fail-highlight { 
+          background-color: #fee2e2 !important; 
+          color: #dc2626 !important; 
+          font-weight: bold !important; 
+        }
+        .pass-text { color: #15803d !important; font-weight: bold; }
+        .fail-text { color: #dc2626 !important; font-weight: bold; }
+        .ab-text { color: #64748b !important; font-weight: bold; }
+        
+        .con-pill {
+          display: inline-block;
+          padding: 3px 8px;
+          border-radius: 12px;
+          font-weight: bold;
+          font-size: 8.5pt;
+          margin-left: 4px;
+        }
+        .con-pill-blue { background: #e0f2fe; color: #0284c7; }
+        .con-pill-green { background: #dcfce7; color: #15803d; }
+        .con-pill-red { background: #fee2e2; color: #b91c1c; }
+        .con-pill-amber { background: #fef3c7; color: #b45309; }
       </style>
     </head>
     <body>
-      <div class="word-frame">
-        ${content.innerHTML}
+      <div class="Section1">
+        ${clone.innerHTML}
       </div>
     </body>
     </html>
@@ -1230,33 +1308,45 @@ function exportConsolidatedPages() {
   const subjectExams = Object.values(data.exams).filter(e => e.classKey === k && e.name === examName);
   if (subjectExams.length === 0) return alert("Select an exam with records first.");
 
+  const totalMaxOverall = subjectExams.length * 100;
+
   let rtf = "{\\rtf1\\ansi\\deff0\n";
-  rtf += "{\\fonttbl{\\f0 Arial;}}\n";
-  rtf += "{\\colortbl ;\\red0\\green128\\blue0;\\red220\\green38\\blue38;\\red100\\green116\\blue139;}\n";
-  rtf += "\\viewkind4\\uc1\\pard\\qc\\b\\fs26 PEARLS PUBLIC SCHOOL (CBSE)\\par\\b0\n";
-  rtf += `\\fs18 Class ${c}-${s} | Academic Year: 2026-27 | Exam: ${examName} [Consolidated Marksheet]\\par\\par\n`;
+  rtf += "{\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}}\n";
+  rtf += "{\\colortbl ;\\red0\\green128\\blue0;\\red220\\green38\\blue38;\\red100\\green116\\blue139;\\red241\\green245\\blue249;\\red254\\green242\\blue242;}\n";
+  
+  rtf += "\\paperw16838\\paperh11906\\margl720\\margr720\\margt720\\margb720\\landscape\n";
+  rtf += "\\pard\\qc\\b\\fs24 PEARLS PUBLIC SCHOOL \\fs18 (CBSE)\\par\\b0\n";
+  rtf += `\\fs16 Class ${c}-${s} | Academic Year: 2026-27 | Exam: ${examName} [Consolidated Marksheet]\\par\\par\n`;
 
-  // Headers
-  rtf += "\\trowd\\trgaph50\\cellx500\\cellx1800\\cellx4000";
-  let cellPos = 4000;
-  subjectExams.forEach(() => {
-    cellPos += 1200; rtf += `\\cellx${cellPos}`;
-  });
-  cellPos += 1200; rtf += `\\cellx${cellPos}`;
-  cellPos += 900; rtf += `\\cellx${cellPos}`;
-  cellPos += 900; rtf += `\\cellx${cellPos}\n`;
+  // Dynamic Column Widths (S.No: 600, Name: 3200)
+  const baseColWidths = [600, 3200];
+  const endColWidths = [1400, 1000];
+  const reserved = baseColWidths.reduce((a,b)=>a+b,0) + endColWidths.reduce((a,b)=>a+b,0);
+  const remainingTwips = Math.max(3000, 15000 - reserved);
+  const perSubjectWidth = Math.floor(remainingTwips / subjectExams.length);
 
-  rtf += "\\intbl\\b S.No\\cell Adm No\\cell Student Name";
-  subjectExams.forEach(ex => { rtf += `\\cell ${ex.subject} (/100)`; });
-  rtf += "\\cell Total (/100)\\cell Grade\\cell Result\\cell\\row\\b0\n";
+  const buildRowDef = () => {
+    let def = "\\trowd\\trgaph60\\trleft0";
+    let curX = 0;
+    baseColWidths.forEach(w => { curX += w; def += `\\clbrdrt\\brdrs\\brdrw10\\clbrdrl\\brdrs\\brdrw10\\clbrdrb\\brdrs\\brdrw10\\clbrdrr\\brdrs\\brdrw10\\cellx${curX}`; });
+    subjectExams.forEach(() => { curX += perSubjectWidth; def += `\\clbrdrt\\brdrs\\brdrw10\\clbrdrl\\brdrs\\brdrw10\\clbrdrb\\brdrs\\brdrw10\\clbrdrr\\brdrs\\brdrw10\\cellx${curX}`; });
+    endColWidths.forEach(w => { curX += w; def += `\\clbrdrt\\brdrs\\brdrw10\\clbrdrl\\brdrs\\brdrw10\\clbrdrb\\brdrs\\brdrw10\\clbrdrr\\brdrs\\brdrw10\\cellx${curX}`; });
+    return def + "\n";
+  };
 
-  // Rows
+  // Header Row
+  rtf += buildRowDef();
+  rtf += "\\intbl\\clcbpat4\\b\\fs15 S.No\\cell Name of the Student\\cell";
+  subjectExams.forEach(ex => { rtf += `${ex.subject} (/100)\\cell `; });
+  rtf += `Total (/${totalMaxOverall})\\cell Result\\cell\\row\\b0\n`;
+
+  // Student Rows
   students.forEach((st, i) => {
     let studentScores100 = [];
     let isFail = false;
     let allAB = true;
+    let cellsData = [];
 
-    let rowData = `\\intbl ${i + 1}\\cell ${st.admissionNo || '-'}\\cell ${st.name}`;
     subjectExams.forEach(ex => {
       let entry = ex.marks[st.id];
       let str = "-";
@@ -1284,32 +1374,28 @@ function exportConsolidatedPages() {
           }
         }
       }
-      rowData += `\\cell ${str}`;
+      cellsData.push(str);
     });
 
-    let finSc = "-", finGr = "-", finRes = "-";
+    let finTotal = "-", finRes = "-";
     if (allAB) {
-      finSc = "AB"; finRes = "\\cf3 AB\\cf0";
+      finTotal = "AB"; 
+      finRes = "\\cf3 AB\\cf0";
     } else if (studentScores100.length) {
-      let avg = studentScores100.reduce((a, b) => a + b, 0) / studentScores100.length;
-      finSc = formatNum(avg);
-      let [, g] = calculateGrade(avg, 100);
-      finGr = g;
+      let sumOfMarks = studentScores100.reduce((a, b) => a + b, 0);
+      finTotal = formatNum(sumOfMarks);
       let pass = !isFail && studentScores100.length === subjectExams.length;
-      finRes = pass ? "\\cf1 Pass\\cf0" : "\\cf2 Fail\\cf0";
+      finRes = pass ? "\\cf1\\b Pass\\b0\\cf0" : "\\cf2\\b Fail\\b0\\cf0";
     }
 
-    rowData += `\\cell ${finSc}\\cell ${finGr}\\cell ${finRes}\\cell\\row\n`;
-    rtf += "\\trowd\\trgaph50\\cellx500\\cellx1800\\cellx4000";
-    let p = 4000;
-    subjectExams.forEach(() => { p += 1200; rtf += `\\cellx${p}`; });
-    p += 1200; rtf += `\\cellx${p}`;
-    p += 900; rtf += `\\cellx${p}`;
-    p += 900; rtf += `\\cellx${p}\n`;
-    rtf += rowData;
+    rtf += buildRowDef();
+    rtf += `\\intbl\\fs15 ${i + 1}\\cell ${st.name}\\cell `;
+    cellsData.forEach(d => { rtf += `${d}\\cell `; });
+    rtf += `\\b ${finTotal}\\b0\\cell ${finRes}\\cell\\row\n`;
   });
 
   rtf += "}";
+
   const blob = new Blob([rtf], { type: "application/rtf" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -1556,7 +1642,7 @@ function renderReport() {
       PEARLS PUBLIC SCHOOL <span style="font-size:13px; font-weight:600;">(CBSE)</span>
     </div>
     <div style="text-align:center; margin-bottom:12px; font-weight:700; font-size:14px; color:var(--text-muted);">
-      Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject})
+      Class ${examObj.className}-${examObj.section} | Academic Year: 2026-27 | Exam: ${examObj.name} (${examObj.subject})
     </div>
     
     <table class="data-table print-table">
@@ -1608,7 +1694,7 @@ function exportToPages() {
   rtf += "{\\fonttbl{\\f0 Arial;}}\n";
   rtf += "{\\colortbl ;\\red0\\green128\\blue0;\\red220\\green38\\blue38;}\n";
   rtf += "\\viewkind4\\uc1\\pard\\qc\\b\\fs32 PEARLS PUBLIC SCHOOL \\fs22 (CBSE)\\par\\b0\n";
-  rtf += `\\fs20 Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject})\\par\\par\n`;
+  rtf += `\\fs20 Class ${examObj.className}-${examObj.section} | Academic Year: 2026-27 | Exam: ${examObj.name} (${examObj.subject})\\par\\par\n`;
 
   rtf += "\\trowd\\trgaph70\\cellx600\\cellx2200\\cellx4800";
   if (isTerm) {

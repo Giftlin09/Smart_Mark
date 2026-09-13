@@ -333,7 +333,7 @@ label {
 .data-table th.text-center, .data-table td.text-center { text-align: center; }
 .data-table th.text-left, .data-table td.text-left { text-align: left; }
 
-/* Sticky Columns for Horizontal Readability in Consolidated Table */
+/* Sticky Columns & Compact Widths for Consolidated Table */
 .con-scroll-container {
   max-height: 75vh;
   border: 1px solid #334155;
@@ -346,15 +346,21 @@ label {
   background: #fff;
 }
 
+.con-table th, 
+.con-table td {
+  padding: 4px 5px !important;
+  font-size: 11px !important;
+}
+
 .con-table thead tr.con-head-dark th {
   background-color: #f1f5f9;
   color: #0f172a;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 11px !important;
   border-bottom: 1px solid #334155;
   border-right: 1px solid #cbd5e1;
   text-align: center;
-  padding: 6px 4px;
+  padding: 5px 3px !important;
   position: sticky;
   top: 0;
   z-index: 5;
@@ -363,27 +369,26 @@ label {
 .con-table thead tr.con-head-sub th {
   background-color: #f8fafc;
   color: #475569;
-  font-size: 10px;
+  font-size: 10px !important;
   font-weight: 600;
   border-bottom: 1px solid #334155;
   border-right: 1px solid #cbd5e1;
-  padding: 5px 2px;
+  padding: 4px 2px !important;
   text-align: center;
   position: sticky;
-  top: 32px;
+  top: 26px;
   z-index: 5;
 }
 
 .con-table td {
   border-bottom: 1px solid #cbd5e1;
   border-right: 1px solid #cbd5e1;
-  padding: 5px 4px;
-  font-size: 11px;
+  font-size: 11px !important;
   color: #1e293b;
   white-space: nowrap;
 }
 
-/* Sticky first three identity columns */
+/* Sticky first two identity columns */
 .con-sticky-1 {
   position: sticky;
   left: 0;
@@ -392,22 +397,15 @@ label {
 }
 .con-sticky-2 {
   position: sticky;
-  left: 36px;
-  z-index: 2;
-  background-color: #ffffff;
-}
-.con-sticky-3 {
-  position: sticky;
-  left: 146px;
+  left: 32px;
   z-index: 2;
   background-color: #ffffff;
   border-right: 2px solid #94a3b8 !important;
 }
 
-/* Higher z-index for intersection of sticky header and sticky columns */
+/* Higher z-index for sticky header and sticky columns intersection */
 .con-table thead tr th.con-sticky-1,
-.con-table thead tr th.con-sticky-2,
-.con-table thead tr th.con-sticky-3 {
+.con-table thead tr th.con-sticky-2 {
   z-index: 10;
   background-color: #f1f5f9;
 }
@@ -417,8 +415,7 @@ label {
 }
 
 .con-table tbody tr:hover td.con-sticky-1,
-.con-table tbody tr:hover td.con-sticky-2,
-.con-table tbody tr:hover td.con-sticky-3 {
+.con-table tbody tr:hover td.con-sticky-2 {
   background-color: #f1f5f9;
 }
 
@@ -429,7 +426,7 @@ label {
   font-weight: 700 !important;
 }
 
-/* Specific failed mark and result cell highlighter */
+/* Specific failed mark, grade, and result cell highlighter */
 .cell-fail-highlight {
   background-color: #fee2e2 !important;
   color: #dc2626 !important;
@@ -461,6 +458,41 @@ label {
 .badge-c2 { background: #fee2e2; color: #b91c1c; }
 .badge-d  { background: #f3e8ff; color: #6b21a8; }
 .badge-e1, .badge-e2 { background: #fecdd3; color: #9f1239; }
+
+/* Metric Badges Pill Styling */
+.con-pill {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.con-pill-blue {
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
+.con-pill-green {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.con-pill-red {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.con-pill-amber {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
 
 .hidden { display: none !important; }
 
