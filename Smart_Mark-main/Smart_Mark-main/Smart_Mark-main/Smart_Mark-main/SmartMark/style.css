@@ -264,7 +264,7 @@ label {
   margin-top: 6px;
 }
 
-/* Consolidated Control Layout: Clean Two-Row Structure */
+/* Consolidated Control Layout */
 .con-filter-card {
   display: flex;
   flex-direction: column;
@@ -433,14 +433,21 @@ label {
   font-weight: 800 !important;
 }
 
-/* Neutral text for AB */
+/* Bold red text for AB and Fail text */
 .ab-text {
-  color: #64748b !important;
-  font-weight: 700;
+  color: #ef4444 !important;
+  font-weight: 700 !important;
 }
 
-.pass-text { color: var(--success-color); font-weight: 700; }
-.fail-text { color: var(--danger-color); font-weight: 700; }
+.fail-text {
+  color: #ef4444 !important;
+  font-weight: 700 !important;
+}
+
+.pass-text {
+  color: #10b981 !important;
+  font-weight: 700 !important;
+}
 
 .badge {
   display: inline-block;

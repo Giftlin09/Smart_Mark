@@ -772,7 +772,7 @@ function renderConsolidatedSheet() {
     return;
   }
 
-  // Calculate Overall Maximum based on 100 per subject (e.g. 4 subjects = 400, 3 subjects = 300)
+  // Overall Max calculated as 100 per registered subject
   const totalMaxOverall = subjectExams.length * 100;
 
   // 1. Build Table Headers: Frozen S.No and Name only (Adm No omitted)
@@ -806,7 +806,6 @@ function renderConsolidatedSheet() {
     }
   });
 
-  // End Columns: Only Total (/<totalMaxOverall>) and Result (Grade removed)
   headerTop += `
       <th colspan="2" style="text-align: center; background:#f1f5f9;">Overall Performance</th>
     </tr>
@@ -833,6 +832,7 @@ function renderConsolidatedSheet() {
     let studentScores100 = [];
     let isStudentFailedInAnySubject = false;
     let attendedAnySubject = false;
+    let studentTotalSum = 0;
     let subjectCellsHtml = "";
 
     subjectExams.forEach(ex => {
@@ -855,13 +855,15 @@ function renderConsolidatedSheet() {
 
           if (typeof resData.total === "number") {
             attendedAnySubject = true;
-            sc100Val = formatNum(resData.total);
+            let numeric100 = Math.round(resData.total);
+            sc100Val = numeric100.toString();
             subGrade = resData.grade || "-";
-            studentScores100.push(resData.total);
-            subStats[ex.subject].sumScaled += resData.total;
+            studentScores100.push(numeric100);
+            studentTotalSum += numeric100;
+            subStats[ex.subject].sumScaled += numeric100;
             subStats[ex.subject].count++;
 
-            if (resData.total < 35) {
+            if (numeric100 < 35) {
               isSubjectFail = true;
               isStudentFailedInAnySubject = true;
             }
@@ -871,7 +873,6 @@ function renderConsolidatedSheet() {
           }
         }
 
-        // Highlight failing mark cells and grade in soft red
         let failMarkClass = isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"';
         subjectCellsHtml += `
           <td class="text-center">${nbsVal}</td>
@@ -895,21 +896,22 @@ function renderConsolidatedSheet() {
           } else if (!isNaN(rawStr)) {
             attendedAnySubject = true;
             let [sc100, gr] = calculateGrade(+rawStr, ex.max);
+            let numeric100 = Math.round(sc100);
             rawVal = rawStr;
-            scaledVal = formatNum(sc100);
+            scaledVal = numeric100.toString();
             subGrade = gr;
-            studentScores100.push(sc100);
-            subStats[ex.subject].sumScaled += sc100;
+            studentScores100.push(numeric100);
+            studentTotalSum += numeric100;
+            subStats[ex.subject].sumScaled += numeric100;
             subStats[ex.subject].count++;
 
-            if (sc100 < 35) {
+            if (numeric100 < 35) {
               isSubjectFail = true;
               isStudentFailedInAnySubject = true;
             }
           }
         }
 
-        // Highlight failing raw, /100, and Grade in soft red
         let failMarkClass = isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"';
         subjectCellsHtml += `
           <td ${failMarkClass}>${rawVal}</td>
@@ -919,7 +921,7 @@ function renderConsolidatedSheet() {
       }
     });
 
-    // 3. Overall Performance: Sum of /100 marks out of totalMaxOverall
+    // 3. Exact Total Addition & Status
     let finalTotalStr = "-";
     let finalResultStr = "-";
     let resultCellClass = "text-center";
@@ -930,11 +932,9 @@ function renderConsolidatedSheet() {
       finalTotalStr = "AB";
       finalResultStr = `<span class="ab-text">AB</span>`;
     } else if (studentScores100.length > 0) {
-      let sumOfMarks = studentScores100.reduce((a, b) => a + b, 0);
-      let avgScaled = sumOfMarks / studentScores100.length;
+      finalTotalStr = studentTotalSum.toString();
+      let avgScaled = Math.round(studentTotalSum / subjectExams.length);
       overallStudentPercentages.push(avgScaled);
-
-      finalTotalStr = formatNum(sumOfMarks);
 
       let passed = !isStudentFailedInAnySubject && (studentScores100.length === subjectExams.length);
       if (passed) {
@@ -962,9 +962,9 @@ function renderConsolidatedSheet() {
     `;
   }).join("");
 
-  // 4. Bottom Subject Averages Row (colspan 2 for frozen left columns)
+  // 4. Bottom Subject Averages Row (Clean percentage without the grade)
   let overallAvgPct = overallStudentPercentages.length > 0
-    ? formatNum(overallStudentPercentages.reduce((a, b) => a + b, 0) / overallStudentPercentages.length)
+    ? Math.round(overallStudentPercentages.reduce((a, b) => a + b, 0) / overallStudentPercentages.length)
     : "0";
 
   let avgRowHtml = `
@@ -974,13 +974,12 @@ function renderConsolidatedSheet() {
 
   subjectExams.forEach(ex => {
     let stat = subStats[ex.subject];
-    let avgScaled = stat.count > 0 ? formatNum(stat.sumScaled / stat.count) : "-";
-    let [, gr] = stat.count > 0 ? calculateGrade(+(stat.sumScaled / stat.count), 100) : ["", "-"];
+    let avgScaled = stat.count > 0 ? Math.round(stat.sumScaled / stat.count) : "-";
     let colSpan = ex.pattern === "term" ? 7 : 3;
 
     avgRowHtml += `
       <td colspan="${colSpan}" class="text-center" style="color:#0f172a;">
-        <b>${avgScaled !== '-' ? avgScaled + '%' : '-'}</b> ${gr && gr !== '-' ? `(${gr})` : ''}
+        <b>${avgScaled !== '-' ? avgScaled + '%' : '-'}</b>
       </td>
     `;
   });
@@ -1263,7 +1262,7 @@ function exportConsolidatedWord() {
         }
         .pass-text { color: #15803d !important; font-weight: bold; }
         .fail-text { color: #dc2626 !important; font-weight: bold; }
-        .ab-text { color: #64748b !important; font-weight: bold; }
+        .ab-text { color: #ef4444 !important; font-weight: bold; }
         
         .con-pill {
           display: inline-block;
@@ -1311,42 +1310,31 @@ function exportConsolidatedPages() {
   const totalMaxOverall = subjectExams.length * 100;
 
   let rtf = "{\\rtf1\\ansi\\deff0\n";
-  rtf += "{\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}}\n";
-  rtf += "{\\colortbl ;\\red0\\green128\\blue0;\\red220\\green38\\blue38;\\red100\\green116\\blue139;\\red241\\green245\\blue249;\\red254\\green242\\blue242;}\n";
-  
-  rtf += "\\paperw16838\\paperh11906\\margl720\\margr720\\margt720\\margb720\\landscape\n";
-  rtf += "\\pard\\qc\\b\\fs24 PEARLS PUBLIC SCHOOL \\fs18 (CBSE)\\par\\b0\n";
-  rtf += `\\fs16 Class ${c}-${s} | Academic Year: 2026-27 | Exam: ${examName} [Consolidated Marksheet]\\par\\par\n`;
+  rtf += "{\\fonttbl{\\f0 Arial;}}\n";
+  rtf += "{\\colortbl ;\\red0\\green128\\blue0;\\red220\\green38\\blue38;\\red100\\green116\\blue139;}\n";
+  rtf += "\\viewkind4\\uc1\\pard\\qc\\b\\fs26 PEARLS PUBLIC SCHOOL (CBSE)\\par\\b0\n";
+  rtf += `\\fs18 Class ${c}-${s} | Academic Year: 2026-27 | Exam: ${examName} [Consolidated Marksheet]\\par\\par\n`;
 
-  // Dynamic Column Widths (S.No: 600, Name: 3200)
-  const baseColWidths = [600, 3200];
-  const endColWidths = [1400, 1000];
-  const reserved = baseColWidths.reduce((a,b)=>a+b,0) + endColWidths.reduce((a,b)=>a+b,0);
-  const remainingTwips = Math.max(3000, 15000 - reserved);
-  const perSubjectWidth = Math.floor(remainingTwips / subjectExams.length);
+  // Headers (S.No, Name, Subjects, Total, Result)
+  rtf += "\\trowd\\trgaph50\\cellx600\\cellx3600";
+  let cellPos = 3600;
+  subjectExams.forEach(() => {
+    cellPos += 1400; rtf += `\\cellx${cellPos}`;
+  });
+  cellPos += 1200; rtf += `\\cellx${cellPos}`;
+  cellPos += 1000; rtf += `\\cellx${cellPos}\n`;
 
-  const buildRowDef = () => {
-    let def = "\\trowd\\trgaph60\\trleft0";
-    let curX = 0;
-    baseColWidths.forEach(w => { curX += w; def += `\\clbrdrt\\brdrs\\brdrw10\\clbrdrl\\brdrs\\brdrw10\\clbrdrb\\brdrs\\brdrw10\\clbrdrr\\brdrs\\brdrw10\\cellx${curX}`; });
-    subjectExams.forEach(() => { curX += perSubjectWidth; def += `\\clbrdrt\\brdrs\\brdrw10\\clbrdrl\\brdrs\\brdrw10\\clbrdrb\\brdrs\\brdrw10\\clbrdrr\\brdrs\\brdrw10\\cellx${curX}`; });
-    endColWidths.forEach(w => { curX += w; def += `\\clbrdrt\\brdrs\\brdrw10\\clbrdrl\\brdrs\\brdrw10\\clbrdrb\\brdrs\\brdrw10\\clbrdrr\\brdrs\\brdrw10\\cellx${curX}`; });
-    return def + "\n";
-  };
+  rtf += "\\intbl\\b S.No\\cell Student Name";
+  subjectExams.forEach(ex => { rtf += `\\cell ${ex.subject} (/100)`; });
+  rtf += `\\cell Total (/${totalMaxOverall})\\cell Result\\cell\\row\\b0\n`;
 
-  // Header Row
-  rtf += buildRowDef();
-  rtf += "\\intbl\\clcbpat4\\b\\fs15 S.No\\cell Name of the Student\\cell";
-  subjectExams.forEach(ex => { rtf += `${ex.subject} (/100)\\cell `; });
-  rtf += `Total (/${totalMaxOverall})\\cell Result\\cell\\row\\b0\n`;
-
-  // Student Rows
+  // Rows
   students.forEach((st, i) => {
     let studentScores100 = [];
     let isFail = false;
     let allAB = true;
-    let cellsData = [];
 
+    let rowData = `\\intbl ${i + 1}\\cell ${st.name}`;
     subjectExams.forEach(ex => {
       let entry = ex.marks[st.id];
       let str = "-";
@@ -1374,28 +1362,29 @@ function exportConsolidatedPages() {
           }
         }
       }
-      cellsData.push(str);
+      rowData += `\\cell ${str}`;
     });
 
-    let finTotal = "-", finRes = "-";
+    let finSc = "-", finRes = "-";
     if (allAB) {
-      finTotal = "AB"; 
-      finRes = "\\cf3 AB\\cf0";
+      finSc = "AB"; finRes = "\\cf2 AB\\cf0";
     } else if (studentScores100.length) {
       let sumOfMarks = studentScores100.reduce((a, b) => a + b, 0);
-      finTotal = formatNum(sumOfMarks);
+      finSc = formatNum(sumOfMarks);
       let pass = !isFail && studentScores100.length === subjectExams.length;
-      finRes = pass ? "\\cf1\\b Pass\\b0\\cf0" : "\\cf2\\b Fail\\b0\\cf0";
+      finRes = pass ? "\\cf1 Pass\\cf0" : "\\cf2 Fail\\cf0";
     }
 
-    rtf += buildRowDef();
-    rtf += `\\intbl\\fs15 ${i + 1}\\cell ${st.name}\\cell `;
-    cellsData.forEach(d => { rtf += `${d}\\cell `; });
-    rtf += `\\b ${finTotal}\\b0\\cell ${finRes}\\cell\\row\n`;
+    rowData += `\\cell ${finSc}\\cell ${finRes}\\cell\\row\n`;
+    rtf += "\\trowd\\trgaph50\\cellx600\\cellx3600";
+    let p = 3600;
+    subjectExams.forEach(() => { p += 1400; rtf += `\\cellx${p}`; });
+    p += 1200; rtf += `\\cellx${p}`;
+    p += 1000; rtf += `\\cellx${p}\n`;
+    rtf += rowData;
   });
 
   rtf += "}";
-
   const blob = new Blob([rtf], { type: "application/rtf" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -1551,7 +1540,7 @@ function renderSummary() {
 function renderReport() {
   let examObj = data.exams[current.exam] || getExamsFor(current.class, current.section)[0];
   if (!examObj) {
-    document.getElementById("reportPage").innerHTML = "<p>No exam details found.</p>";
+    document.getElementById("reportPage").innerHTML = "<p style='text-align:center; padding: 20px; color: var(--text-muted);'>No exam details found.</p>";
     return;
   }
   current.exam = examObj.id;
@@ -1584,20 +1573,29 @@ function renderReport() {
       let val = examObj.marks[s.id] || { nbs: "", se: "", t: "", e: "" };
       if (typeof val !== "object") val = { nbs: "", se: "", t: "", e: val };
       let resData = calculateTermScore(val, examMax);
-      let resClass = getResultClass(resData.res);
+      
+      let isFail = resData.res === "Fail";
+      let isAB = resData.res === "AB";
+
+      const nameClass = isFail ? "text-left student-fail-highlight" : "text-left";
+      const scoreClass = isFail ? "text-center cell-fail-highlight" : (isAB ? "text-center ab-text" : "text-center");
+      const gradeClass = isFail ? "text-center cell-fail-highlight" : "text-center";
+      const resultClass = isFail ? "text-center cell-fail-highlight" : (isAB ? "text-center ab-text" : "text-center pass-text");
+
+      const formatScoreVal = (v) => v === "AB" ? `<span class="ab-text">AB</span>` : (v !== "" && v !== undefined ? v : "-");
 
       return `<tr>
         <td class="text-center">${i + 1}</td>
         <td class="text-center" style="font-weight:600; color: #475569;">${escapeHtml(s.admissionNo || "-")}</td>
-        <td class="text-left">${escapeHtml(s.name)}</td>
-        <td class="text-center">${val.nbs !== "" && val.nbs !== undefined ? val.nbs : '-'}</td>
-        <td class="text-center">${val.se !== "" && val.se !== undefined ? val.se : '-'}</td>
-        <td class="text-center">${val.t !== "" && val.t !== undefined ? val.t : '-'}</td>
-        <td class="text-center">${val.e !== "" && val.e !== undefined ? val.e : '-'}</td>
-        <td class="text-center"><b>${resData.totalStr}</b></td>
-        <td class="text-center"><b>${resData.grade}</b></td>
+        <td class="${nameClass}">${escapeHtml(s.name)}</td>
+        <td class="text-center">${formatScoreVal(val.nbs)}</td>
+        <td class="text-center">${formatScoreVal(val.se)}</td>
+        <td class="text-center">${formatScoreVal(val.t)}</td>
+        <td class="text-center">${formatScoreVal(val.e)}</td>
+        <td class="${scoreClass}"><b>${resData.totalStr === "AB" ? '<span class="ab-text">AB</span>' : resData.totalStr}</b></td>
+        <td class="${gradeClass}"><b>${resData.grade}</b></td>
         <td class="text-center">${resData.gradePoint}</td>
-        <td class="text-center ${resClass}">${resData.res}</td>
+        <td class="${resultClass}">${resData.res}</td>
       </tr>`;
     }).join("");
 
@@ -1619,18 +1617,25 @@ function renderReport() {
     rowsHtml = students.map((s, i) => {
       let val = typeof examObj.marks[s.id] === "object" ? (examObj.marks[s.id].e ?? "") : (examObj.marks[s.id] ?? "");
       let [score100, grade, gradePoint, res] = calculateGrade(val, examObj.max);
+      let isFail = res === "Fail";
+      let isAB = res === "AB" || val === "AB";
+
       let convertedText = score100 === "AB" ? "AB" : (score100 === "" ? "" : formatNum(score100));
-      let resClass = getResultClass(res);
+
+      const nameClass = isFail ? "text-left student-fail-highlight" : "text-left";
+      const scoreClass = isFail ? "text-center cell-fail-highlight" : (isAB ? "text-center ab-text" : "text-center");
+      const gradeClass = isFail ? "text-center cell-fail-highlight" : "text-center";
+      const resultClass = isFail ? "text-center cell-fail-highlight" : (isAB ? "text-center ab-text" : "text-center pass-text");
 
       return `<tr>
         <td class="text-center">${i + 1}</td>
         <td class="text-center" style="font-weight:600; color: #475569;">${escapeHtml(s.admissionNo || "-")}</td>
-        <td class="text-left">${escapeHtml(s.name)}</td>
-        <td class="text-center">${val}</td>
-        <td class="text-center">${convertedText}</td>
-        <td class="text-center"><b>${grade}</b></td>
+        <td class="${nameClass}">${escapeHtml(s.name)}</td>
+        <td class="${scoreClass}">${val === "AB" ? '<span class="ab-text">AB</span>' : val}</td>
+        <td class="${scoreClass}"><b>${convertedText === "AB" ? '<span class="ab-text">AB</span>' : convertedText}</b></td>
+        <td class="${gradeClass}"><b>${grade}</b></td>
         <td class="text-center">${gradePoint}</td>
-        <td class="text-center ${resClass}">${res}</td>
+        <td class="${resultClass}">${res}</td>
       </tr>`;
     }).join("");
   }
@@ -1642,7 +1647,7 @@ function renderReport() {
       PEARLS PUBLIC SCHOOL <span style="font-size:13px; font-weight:600;">(CBSE)</span>
     </div>
     <div style="text-align:center; margin-bottom:12px; font-weight:700; font-size:14px; color:var(--text-muted);">
-      Class ${examObj.className}-${examObj.section} | Academic Year: 2026-27 | Exam: ${examObj.name} (${examObj.subject})
+      Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject})
     </div>
     
     <table class="data-table print-table">
@@ -1694,7 +1699,7 @@ function exportToPages() {
   rtf += "{\\fonttbl{\\f0 Arial;}}\n";
   rtf += "{\\colortbl ;\\red0\\green128\\blue0;\\red220\\green38\\blue38;}\n";
   rtf += "\\viewkind4\\uc1\\pard\\qc\\b\\fs32 PEARLS PUBLIC SCHOOL \\fs22 (CBSE)\\par\\b0\n";
-  rtf += `\\fs20 Class ${examObj.className}-${examObj.section} | Academic Year: 2026-27 | Exam: ${examObj.name} (${examObj.subject})\\par\\par\n`;
+  rtf += `\\fs20 Class ${examObj.className}-${examObj.section} | Academic Year: ${examObj.academicYear || "2026-27"} | Exam: ${examObj.name} (${examObj.subject})\\par\\par\n`;
 
   rtf += "\\trowd\\trgaph70\\cellx600\\cellx2200\\cellx4800";
   if (isTerm) {
