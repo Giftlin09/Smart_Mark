@@ -63,7 +63,7 @@ function toggleExamPatternFields() {
   }
 }
 
-// 9-Point Scale: D (33-40, 4.0), E1 (21-32, 3.0), E2 (0-20, 2.0). Pass condition: >= 35
+// 9-Point Scale evaluated strictly on ROUNDED integer score
 function calculateGrade(value, maxMark) {
   let valStr = String(value).trim().toUpperCase();
   
@@ -71,7 +71,8 @@ function calculateGrade(value, maxMark) {
   if (valStr === "" || isNaN(valStr) || maxMark <= 0) return ["", "", "", ""];
 
   let numVal = +valStr;
-  let score100 = Math.max(0, Math.min(maxMark, numVal)) * 100 / maxMark;
+  let rawScore100 = Math.max(0, Math.min(maxMark, numVal)) * 100 / maxMark;
+  let score100 = Math.round(rawScore100); // Strict Roundoff Evaluation
   let grade = "", gradePoint = "";
 
   if (score100 >= 91) { grade = "A1"; gradePoint = "10.0"; }
@@ -772,7 +773,7 @@ function renderConsolidatedSheet() {
     return;
   }
 
-  // Overall Max calculated as 100 per registered subject
+  // Dynamic maximum: 100 points per subject
   const totalMaxOverall = subjectExams.length * 100;
 
   // 1. Build Table Headers: Frozen S.No and Name only (Adm No omitted)
@@ -799,13 +800,14 @@ function renderConsolidatedSheet() {
     } else {
       headerTop += `<th colspan="3" style="text-align: center;">${escapeHtml(ex.subject)}</th>`;
       headerSub += `
-        <th style="width: 48px;">Raw</th>
+        <th style="width: 52px;">(/${ex.max})</th>
         <th style="width: 42px;">/100</th>
         <th style="width: 38px;">Grade</th>
       `;
     }
   });
 
+  // End Columns: Only Total (/<totalMaxOverall>) and Result
   headerTop += `
       <th colspan="2" style="text-align: center; background:#f1f5f9;">Overall Performance</th>
     </tr>
@@ -855,7 +857,7 @@ function renderConsolidatedSheet() {
 
           if (typeof resData.total === "number") {
             attendedAnySubject = true;
-            let numeric100 = Math.round(resData.total);
+            let numeric100 = Math.round(resData.total); // Roundoff score
             sc100Val = numeric100.toString();
             subGrade = resData.grade || "-";
             studentScores100.push(numeric100);
@@ -896,7 +898,7 @@ function renderConsolidatedSheet() {
           } else if (!isNaN(rawStr)) {
             attendedAnySubject = true;
             let [sc100, gr] = calculateGrade(+rawStr, ex.max);
-            let numeric100 = Math.round(sc100);
+            let numeric100 = Math.round(sc100); // Roundoff score
             rawVal = rawStr;
             scaledVal = numeric100.toString();
             subGrade = gr;
@@ -1109,7 +1111,7 @@ function exportConsolidatedCSV() {
          subjectExams.map(ex => {
            return ex.pattern === "term"
              ? `"${ex.subject} NBS","${ex.subject} SE","${ex.subject} T","${ex.subject} Exam","${ex.subject} Total","${ex.subject} /100","${ex.subject} Grade"`
-             : `"${ex.subject} Raw(/${ex.max})","${ex.subject} /100","${ex.subject} Grade"`;
+             : `"${ex.subject} (/${ex.max})","${ex.subject} /100","${ex.subject} Grade"`;
          }).join(",") + `,"Total (/${totalMaxOverall})","Result"\n`;
 
   students.forEach((st, i) => {
@@ -1132,10 +1134,11 @@ function exportConsolidatedCSV() {
           tot = resData.totalStr ?? "";
           if (typeof resData.total === "number") {
             allExamsAbsent = false;
-            sc100 = formatNum(resData.total);
+            let num100 = Math.round(resData.total);
+            sc100 = num100.toString();
             gr = resData.grade;
-            studentScores100.push(resData.total);
-            if (resData.total < 35) isStudentFailedInAnySubject = true;
+            studentScores100.push(num100);
+            if (num100 < 35) isStudentFailedInAnySubject = true;
           } else if (resData.total === "AB") {
             sc100 = "AB";
           }
@@ -1150,11 +1153,12 @@ function exportConsolidatedCSV() {
           } else if (!isNaN(rawStr)) {
             allExamsAbsent = false;
             let [converted, grade] = calculateGrade(+rawStr, ex.max);
+            let num100 = Math.round(converted);
             raw = rawStr;
-            sc100 = formatNum(converted);
+            sc100 = num100.toString();
             gr = grade;
-            studentScores100.push(converted);
-            if (converted < 35) isStudentFailedInAnySubject = true;
+            studentScores100.push(num100);
+            if (num100 < 35) isStudentFailedInAnySubject = true;
           }
         }
         row += `,"${raw}","${sc100}","${gr}"`;
@@ -1251,7 +1255,7 @@ function exportConsolidatedWord() {
         td.text-center, th.text-center { text-align: center !important; }
         
         .student-fail-highlight { 
-          background-color: #fef2f2 !important; 
+          background-color: #fee2e2 !important; 
           color: #000000 !important; 
           font-weight: bold !important; 
         }
@@ -1343,9 +1347,10 @@ function exportConsolidatedPages() {
           let resData = calculateTermScore(typeof entry === "object" ? entry : { nbs: "", se: "", t: "", e: entry }, ex.max);
           if (typeof resData.total === "number") {
             allAB = false;
-            str = `${formatNum(resData.total)} (${resData.grade})`;
-            studentScores100.push(resData.total);
-            if (resData.total < 35) isFail = true;
+            let num100 = Math.round(resData.total);
+            str = `${num100} (${resData.grade})`;
+            studentScores100.push(num100);
+            if (num100 < 35) isFail = true;
           } else if (resData.total === "AB") {
             str = "AB";
           }
@@ -1356,9 +1361,10 @@ function exportConsolidatedPages() {
           } else if (!isNaN(rawStr)) {
             allAB = false;
             let [sc100, gr] = calculateGrade(+rawStr, ex.max);
-            str = `${formatNum(sc100)} (${gr})`;
-            studentScores100.push(sc100);
-            if (sc100 < 35) isFail = true;
+            let num100 = Math.round(sc100);
+            str = `${num100} (${gr})`;
+            studentScores100.push(num100);
+            if (num100 < 35) isFail = true;
           }
         }
       }
@@ -1440,7 +1446,8 @@ function calculateStatistics(e) {
       if (resData.total === "AB") {
         absCount++;
       } else if (typeof resData.total === "number") {
-        numericScores.push(resData.total);
+        let roundedTotal = Math.round(resData.total);
+        numericScores.push(roundedTotal);
         if (counts[resData.grade] !== undefined) counts[resData.grade]++;
       }
     } else {
@@ -1450,7 +1457,8 @@ function calculateStatistics(e) {
         absCount++;
       } else {
         let sc = +rawStr * 100 / dynamicMax;
-        numericScores.push(sc);
+        let roundedSc = Math.round(sc);
+        numericScores.push(roundedSc);
         let [, grade] = calculateGrade(sc, 100);
         if (counts[grade] !== undefined) counts[grade]++;
       }
@@ -1577,25 +1585,24 @@ function renderReport() {
       let isFail = resData.res === "Fail";
       let isAB = resData.res === "AB";
 
-      const nameClass = isFail ? "text-left student-fail-highlight" : "text-left";
-      const scoreClass = isFail ? "text-center cell-fail-highlight" : (isAB ? "text-center ab-text" : "text-center");
-      const gradeClass = isFail ? "text-center cell-fail-highlight" : "text-center";
-      const resultClass = isFail ? "text-center cell-fail-highlight" : (isAB ? "text-center ab-text" : "text-center pass-text");
+      const rowClass = isFail ? 'class="row-fail-highlight"' : '';
+      const textHighlight = isFail ? 'class="text-center fail-mark-text"' : 'class="text-center"';
+      const resultText = isFail ? `<span class="fail-mark-text">Fail</span>` : (isAB ? `<span class="ab-text">AB</span>` : `<span class="pass-text">Pass</span>`);
 
       const formatScoreVal = (v) => v === "AB" ? `<span class="ab-text">AB</span>` : (v !== "" && v !== undefined ? v : "-");
 
-      return `<tr>
+      return `<tr ${rowClass}>
         <td class="text-center">${i + 1}</td>
         <td class="text-center" style="font-weight:600; color: #475569;">${escapeHtml(s.admissionNo || "-")}</td>
-        <td class="${nameClass}">${escapeHtml(s.name)}</td>
+        <td class="text-left">${escapeHtml(s.name)}</td>
         <td class="text-center">${formatScoreVal(val.nbs)}</td>
         <td class="text-center">${formatScoreVal(val.se)}</td>
         <td class="text-center">${formatScoreVal(val.t)}</td>
         <td class="text-center">${formatScoreVal(val.e)}</td>
-        <td class="${scoreClass}"><b>${resData.totalStr === "AB" ? '<span class="ab-text">AB</span>' : resData.totalStr}</b></td>
-        <td class="${gradeClass}"><b>${resData.grade}</b></td>
+        <td ${textHighlight}><b>${resData.totalStr === "AB" ? '<span class="ab-text">AB</span>' : resData.totalStr}</b></td>
+        <td ${textHighlight}><b>${resData.grade}</b></td>
         <td class="text-center">${resData.gradePoint}</td>
-        <td class="${resultClass}">${resData.res}</td>
+        <td class="text-center">${resultText}</td>
       </tr>`;
     }).join("");
 
@@ -1622,20 +1629,19 @@ function renderReport() {
 
       let convertedText = score100 === "AB" ? "AB" : (score100 === "" ? "" : formatNum(score100));
 
-      const nameClass = isFail ? "text-left student-fail-highlight" : "text-left";
-      const scoreClass = isFail ? "text-center cell-fail-highlight" : (isAB ? "text-center ab-text" : "text-center");
-      const gradeClass = isFail ? "text-center cell-fail-highlight" : "text-center";
-      const resultClass = isFail ? "text-center cell-fail-highlight" : (isAB ? "text-center ab-text" : "text-center pass-text");
+      const rowClass = isFail ? 'class="row-fail-highlight"' : '';
+      const textHighlight = isFail ? 'class="text-center fail-mark-text"' : 'class="text-center"';
+      const resultText = isFail ? `<span class="fail-mark-text">Fail</span>` : (isAB ? `<span class="ab-text">AB</span>` : `<span class="pass-text">Pass</span>`);
 
-      return `<tr>
+      return `<tr ${rowClass}>
         <td class="text-center">${i + 1}</td>
         <td class="text-center" style="font-weight:600; color: #475569;">${escapeHtml(s.admissionNo || "-")}</td>
-        <td class="${nameClass}">${escapeHtml(s.name)}</td>
-        <td class="${scoreClass}">${val === "AB" ? '<span class="ab-text">AB</span>' : val}</td>
-        <td class="${scoreClass}"><b>${convertedText === "AB" ? '<span class="ab-text">AB</span>' : convertedText}</b></td>
-        <td class="${gradeClass}"><b>${grade}</b></td>
+        <td class="text-left">${escapeHtml(s.name)}</td>
+        <td ${textHighlight}>${val === "AB" ? '<span class="ab-text">AB</span>' : val}</td>
+        <td ${textHighlight}><b>${convertedText === "AB" ? '<span class="ab-text">AB</span>' : convertedText}</b></td>
+        <td ${textHighlight}><b>${grade}</b></td>
         <td class="text-center">${gradePoint}</td>
-        <td class="${resultClass}">${res}</td>
+        <td class="text-center">${resultText}</td>
       </tr>`;
     }).join("");
   }
@@ -1665,7 +1671,7 @@ function renderReport() {
         <b>Pass Rate (Attended):</b> ${stats.passRate}%
       </div>
       <div style="margin-top:6px;">
-        <b>Grade Counts:</b> &nbsp;${Object.entries(stats.counts).map(([gr, count]) => `<b>${gr}:</b> ${count}`).join(" &nbsp;|&nbsp; ")}
+        <b>Grade Counts:</b> &nbsp;${Object.entries(stats.counts).map(([gr, count]) => `<b>${gr}:</b>${count}`).join(" &nbsp;|&nbsp; ")}
       </div>
     </div>
   `;
@@ -1731,7 +1737,7 @@ function exportToPages() {
   });
 
   rtf += `\\pard\\sa100\\par\\b Class Metrics:\\b0  Total Enrolled: ${stats.totalStudents} | Average: ${stats.average}% | Passed: ${stats.passed} | Absent: ${stats.absentCount} | Pass Rate: ${stats.passRate}%\\par\n`;
-  rtf += `\\b Grade Counts:\\b0  ${Object.entries(stats.counts).map(([gr, count]) => `${gr}: ${count}`).join(" | ")}\\par\n`;
+  rtf += `\\b Grade Counts:\\b0  ${Object.entries(stats.counts).map(([gr, count]) => `${gr}:${count}`).join(" | ")}\\par\n`;
   rtf += "}";
 
   const blob = new Blob([rtf], { type: "application/rtf" });

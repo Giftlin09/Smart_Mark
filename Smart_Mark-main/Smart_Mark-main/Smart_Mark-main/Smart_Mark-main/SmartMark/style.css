@@ -419,33 +419,45 @@ label {
   background-color: #f1f5f9;
 }
 
-/* Student Failed Highlight: Soft Red Background with pure black text */
+/* Unified Fail Highlighting: Equal Soft Red Saturation (#fee2e2) */
 .student-fail-highlight {
-  background-color: #fef2f2 !important;
+  background-color: #fee2e2 !important;
   color: #000000 !important;
   font-weight: 700 !important;
 }
 
-/* Specific failed mark, grade, and result cell highlighter */
 .cell-fail-highlight {
   background-color: #fee2e2 !important;
   color: #dc2626 !important;
   font-weight: 800 !important;
 }
 
-/* Bold red text for AB and Fail text */
-.ab-text {
-  color: #ef4444 !important;
+tr.row-fail-highlight td {
+  background-color: #fee2e2 !important;
+}
+
+tr.row-fail-highlight td.text-left {
+  color: #000000 !important;
   font-weight: 700 !important;
 }
 
-.fail-text {
+.fail-mark-text {
+  color: #dc2626 !important;
+  font-weight: 800 !important;
+}
+
+.ab-text {
   color: #ef4444 !important;
   font-weight: 700 !important;
 }
 
 .pass-text {
   color: #10b981 !important;
+  font-weight: 700 !important;
+}
+
+.fail-text {
+  color: #ef4444 !important;
   font-weight: 700 !important;
 }
 
