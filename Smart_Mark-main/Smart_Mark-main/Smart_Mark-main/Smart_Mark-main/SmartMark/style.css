@@ -403,7 +403,6 @@ label {
   border-right: 2px solid #94a3b8 !important;
 }
 
-/* Higher z-index for sticky header and sticky columns intersection */
 .con-table thead tr th.con-sticky-1,
 .con-table thead tr th.con-sticky-2 {
   z-index: 10;
@@ -419,7 +418,7 @@ label {
   background-color: #f1f5f9;
 }
 
-/* Unified Fail Highlighting: Equal Soft Red Saturation (#fee2e2) */
+/* Unified Soft Red Highlight for Failed Cells and Rows */
 .student-fail-highlight {
   background-color: #fee2e2 !important;
   color: #000000 !important;
@@ -439,6 +438,13 @@ tr.row-fail-highlight td {
 tr.row-fail-highlight td.text-left {
   color: #000000 !important;
   font-weight: 700 !important;
+}
+
+/* Pale Yellow Highlight for Absent (AB) */
+.cell-ab-highlight {
+  background-color: #fef9c3 !important;
+  color: #b45309 !important;
+  font-weight: 800 !important;
 }
 
 .fail-mark-text {
