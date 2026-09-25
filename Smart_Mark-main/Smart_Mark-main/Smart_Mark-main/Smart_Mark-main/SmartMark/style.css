@@ -418,8 +418,14 @@ label {
   background-color: #f1f5f9;
 }
 
-/* Unified Soft Red Highlight for Failed Cells and Rows */
+/* Unified Soft Red Highlight for Failed Cells and S.No/Name (#fee2e2) */
 .student-fail-highlight {
+  background-color: #fee2e2 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+}
+
+.sno-fail-highlight {
   background-color: #fee2e2 !important;
   color: #000000 !important;
   font-weight: 700 !important;
@@ -431,16 +437,7 @@ label {
   font-weight: 800 !important;
 }
 
-tr.row-fail-highlight td {
-  background-color: #fee2e2 !important;
-}
-
-tr.row-fail-highlight td.text-left {
-  color: #000000 !important;
-  font-weight: 700 !important;
-}
-
-/* Pale Yellow Highlight for Absent (AB) */
+/* Pale Yellow Highlight for Absent (AB) and its Grade Dash (-) (#fef9c3) */
 .cell-ab-highlight {
   background-color: #fef9c3 !important;
   color: #b45309 !important;
@@ -453,8 +450,8 @@ tr.row-fail-highlight td.text-left {
 }
 
 .ab-text {
-  color: #ef4444 !important;
-  font-weight: 700 !important;
+  color: #b45309 !important;
+  font-weight: 800 !important;
 }
 
 .pass-text {
@@ -463,8 +460,8 @@ tr.row-fail-highlight td.text-left {
 }
 
 .fail-text {
-  color: #ef4444 !important;
-  font-weight: 700 !important;
+  color: #dc2626 !important;
+  font-weight: 800 !important;
 }
 
 .badge {

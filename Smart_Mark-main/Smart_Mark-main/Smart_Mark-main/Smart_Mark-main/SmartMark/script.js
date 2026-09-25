@@ -16,28 +16,37 @@ if (!data) {
 
 let current = { class: "1", section: "A", exam: "", year: "2026-27" };
 
-// Priority subject order: English -> Tamil -> Maths -> Science -> Social -> G.K -> Computer -> Hindi
-const SUBJECT_ORDER = [
-  "ENGLISH", "ENG",
-  "TAMIL",
-  "MATHS", "MATHEMATICS", "MATH",
-  "SCIENCE", "SCI",
-  "SOCIAL", "SOCIAL SCIENCE", "SOC", "EVS",
-  "G.K", "GK", "GENERAL KNOWLEDGE",
-  "COMPUTER", "COMPUTER SCIENCE", "CS", "IT",
-  "HINDI"
-];
-
+// Strict Priority Order: English (0) -> Tamil (1) -> Maths (2) -> Science (3) -> Social (4) -> G.K (5) -> Computer (6) -> Hindi (7)
 function getSubjectRank(subjectName) {
   if (!subjectName) return 999;
-  const clean = subjectName.trim().toUpperCase();
-  const exactIdx = SUBJECT_ORDER.indexOf(clean);
-  if (exactIdx !== -1) return exactIdx;
+  const raw = subjectName.trim().toUpperCase();
+  const clean = raw.replace(/[^A-Z]/g, "");
 
-  for (let i = 0; i < SUBJECT_ORDER.length; i++) {
-    if (clean.includes(SUBJECT_ORDER[i])) return i;
-  }
-  return 900 + clean.charCodeAt(0);
+  // 1. English
+  if (raw === "ENG" || raw.startsWith("ENG") || clean.includes("ENGLISH") || clean === "ENG") return 0;
+
+  // 2. Tamil
+  if (raw === "TAM" || raw.startsWith("TAM") || clean.includes("TAMIL") || clean === "TAM") return 1;
+
+  // 3. Maths
+  if (raw.startsWith("MATH") || clean.includes("MATH") || clean.includes("MATHEMATIC")) return 2;
+
+  // 4. Science
+  if (raw.startsWith("SCI") || clean.includes("SCIENCE") || clean === "SCI") return 3;
+
+  // 5. Social
+  if (raw.startsWith("SOC") || clean.includes("SOCIAL") || clean.includes("EVS") || clean === "SOC") return 4;
+
+  // 6. G.K
+  if (clean === "GK" || raw.includes("G.K") || clean.includes("GENERALKNOW") || clean.includes("KNOWLEDGE")) return 5;
+
+  // 7. Computer
+  if (clean === "CS" || clean === "IT" || raw.startsWith("COMP") || clean.includes("COMPUTER")) return 6;
+
+  // 8. Hindi
+  if (raw.startsWith("HIN") || clean.includes("HINDI") || clean === "HIN") return 7;
+
+  return 100 + raw.charCodeAt(0);
 }
 
 function sortSubjectExams(examList) {
@@ -118,10 +127,10 @@ function calculateGrade(value, maxMark) {
 }
 
 function getResultClass(res) {
-  if (res === 'Pass') return 'pass-text';
-  if (res === 'Fail') return 'fail-text';
-  if (res === 'AB') return 'ab-text';
-  return '';
+  if (res === "Pass") return "pass-text";
+  if (res === "Fail") return "fail-text";
+  if (res === "AB") return "ab-text";
+  return "";
 }
 
 function show(sectionId) {
@@ -523,7 +532,7 @@ function renderMarkEntryTable(examObj) {
       if (typeof val !== "object") val = { nbs: "", se: "", t: "", e: val };
       
       let resData = calculateTermScore(val, dynamicExamMax);
-      let badgeClass = resData.grade && resData.grade !== "-" ? `badge badge-${resData.grade.toLowerCase()}` : '';
+      let badgeClass = resData.grade && resData.grade !== "-" ? `badge badge-${resData.grade.toLowerCase()}` : "";
       let resClass = getResultClass(resData.res);
 
       return `<tr>
@@ -690,7 +699,7 @@ function updateTermRow(inp, dynamicExamMax) {
   let e = row.querySelector('[data-field="e"]').value;
 
   let resData = calculateTermScore({ nbs, se, t, e }, dynamicExamMax);
-  let badgeClass = resData.grade && resData.grade !== "-" ? `badge badge-${resData.grade.toLowerCase()}` : '';
+  let badgeClass = resData.grade && resData.grade !== "-" ? `badge badge-${resData.grade.toLowerCase()}` : "";
 
   row.children[7].innerHTML = `<b>${resData.totalStr}</b>`;
   row.children[8].innerHTML = `<span class="${badgeClass}">${resData.grade}</span>`;
@@ -700,7 +709,7 @@ function updateTermRow(inp, dynamicExamMax) {
 }
 
 function createMarkRow(st, index, val, score100, grade, gradePoint, res) {
-  let badgeClass = grade && grade !== "-" ? `badge badge-${grade.toLowerCase()}` : '';
+  let badgeClass = grade && grade !== "-" ? `badge badge-${grade.toLowerCase()}` : "";
   let convertedText = score100 === "AB" ? "AB" : (score100 === "" ? "" : formatNum(score100));
   let resClass = getResultClass(res);
 
@@ -720,7 +729,7 @@ function updateMarkRow(inp, max) {
   let [score100, grade, gradePoint, res] = calculateGrade(inp.value, max);
   let row = inp.closest("tr");
   let convertedText = score100 === "AB" ? "AB" : (score100 === "" ? "" : formatNum(score100));
-  let badgeClass = grade && grade !== "-" ? `badge badge-${grade.toLowerCase()}` : '';
+  let badgeClass = grade && grade !== "-" ? `badge badge-${grade.toLowerCase()}` : "";
 
   row.children[4].innerHTML = `<b>${convertedText}</b>`;
   row.children[5].innerHTML = `<span class="${badgeClass}">${grade}</span>`;
@@ -768,7 +777,7 @@ function clearCurrentMarks() {
 }
 
 // -------------------------------------------------------------
-// CONSOLIDATED REGISTER
+// CONSOLIDATED REGISTER (ADMISSION NUMBER EXCLUDED)
 // -------------------------------------------------------------
 
 function renderConsolidatedSheet() {
@@ -794,7 +803,7 @@ function renderConsolidatedSheet() {
   const k = getKey(c, s);
   const rawSubjectExams = Object.values(data.exams).filter(e => e.classKey === k && e.name === examName);
 
-  // Filter out subjects with no marks entered at all, then sort by predefined hierarchy
+  // Auto-skip subjects with zero marks recorded, then sort strictly by preset sequence
   const activeExams = rawSubjectExams.filter(ex => Object.keys(ex.marks || {}).length > 0);
   const subjectExams = sortSubjectExams(activeExams.length > 0 ? activeExams : rawSubjectExams);
 
@@ -906,8 +915,9 @@ function renderConsolidatedSheet() {
           }
         }
 
+        // Pale yellow for AB mark cells and its Grade Dash (-), soft red for Fail
         let markClass = isSubjectAB ? 'class="text-center cell-ab-highlight"' : (isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"');
-        let gradeCellClass = isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"';
+        let gradeCellClass = isSubjectAB ? 'class="text-center cell-ab-highlight"' : (isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"');
 
         subjectCellsHtml += `
           <td class="text-center">${nbsVal}</td>
@@ -948,8 +958,9 @@ function renderConsolidatedSheet() {
           }
         }
 
+        // Pale yellow for AB mark cells and its Grade Dash (-), soft red for Fail
         let markClass = isSubjectAB ? 'class="text-center cell-ab-highlight"' : (isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"');
-        let gradeCellClass = isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"';
+        let gradeCellClass = isSubjectAB ? 'class="text-center cell-ab-highlight"' : (isSubjectFail ? 'class="text-center cell-fail-highlight"' : 'class="text-center"');
 
         subjectCellsHtml += `
           <td ${markClass}>${rawVal}</td>
@@ -980,13 +991,18 @@ function renderConsolidatedSheet() {
       }
     }
 
+    // Soft red highlight applied to S.No, Name, and Result when student fails
+    const snoCellClass = isStudentFailedInAnySubject
+      ? "text-center con-sticky-1 sno-fail-highlight"
+      : "text-center con-sticky-1";
+
     const nameCellClass = isStudentFailedInAnySubject
       ? "text-left con-sticky-2 student-fail-highlight"
       : "text-left con-sticky-2";
 
     return `
       <tr>
-        <td class="text-center con-sticky-1" style="color:var(--text-muted); font-size:11px;">${i + 1}</td>
+        <td class="${snoCellClass}" style="font-size:11px;">${i + 1}</td>
         <td class="${nameCellClass}">${escapeHtml(st.name)}</td>
         ${subjectCellsHtml}
         <td class="text-center" style="font-weight:800;">${finalTotalStr}</td>
@@ -995,7 +1011,7 @@ function renderConsolidatedSheet() {
     `;
   }).join("");
 
-  // 4. Bottom Subject Averages Row
+  // 4. Bottom Subject Averages Row (Clean percentage without the grade)
   let overallAvgPct = overallStudentPercentages.length > 0
     ? Math.round(overallStudentPercentages.reduce((a, b) => a + b, 0) / overallStudentPercentages.length)
     : "0";
@@ -1217,7 +1233,7 @@ function exportConsolidatedCSV() {
 }
 
 function exportConsolidatedWord() {
-  const content = document.getElementById('conPrintWrapper');
+  const content = document.getElementById("conPrintWrapper");
   const c = document.getElementById("conClass").value || current.class;
   const s = document.getElementById("conSection").value || current.section;
   const examName = document.getElementById("conExamSel").value;
@@ -1225,8 +1241,8 @@ function exportConsolidatedWord() {
   if (!content || !content.innerHTML.trim()) return alert("No table available to export.");
 
   const clone = content.cloneNode(true);
-  clone.querySelectorAll('.con-sticky-1, .con-sticky-2').forEach(el => {
-    el.style.position = 'static';
+  clone.querySelectorAll(".con-sticky-1, .con-sticky-2").forEach(el => {
+    el.style.position = "static";
   });
 
   const htmlContent = `
@@ -1278,11 +1294,12 @@ function exportConsolidatedWord() {
         td.text-left, th.text-left { text-align: left !important; }
         td.text-center, th.text-center { text-align: center !important; }
         .student-fail-highlight { background-color: #fee2e2 !important; color: #000000 !important; font-weight: bold !important; }
+        .sno-fail-highlight { background-color: #fee2e2 !important; color: #000000 !important; font-weight: bold !important; }
         .cell-fail-highlight { background-color: #fee2e2 !important; color: #dc2626 !important; font-weight: bold !important; }
         .cell-ab-highlight { background-color: #fef9c3 !important; color: #b45309 !important; font-weight: bold !important; }
         .pass-text { color: #15803d !important; font-weight: bold; }
         .fail-text { color: #dc2626 !important; font-weight: bold; }
-        .ab-text { color: #ef4444 !important; font-weight: bold; }
+        .ab-text { color: #b45309 !important; font-weight: bold; }
       </style>
     </head>
     <body>
@@ -1293,9 +1310,9 @@ function exportConsolidatedWord() {
     </html>
   `;
 
-  const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
+  const blob = new Blob(["\ufeff" + htmlContent], { type: "application/msword" });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = `Consolidated_Class_${c}${s}_${examName}.doc`;
   document.body.appendChild(link);
@@ -1404,7 +1421,7 @@ function exportConsolidatedPages() {
 }
 
 function downloadConsolidatedPDF() {
-  const element = document.getElementById('conPrintWrapper');
+  const element = document.getElementById("conPrintWrapper");
   const c = document.getElementById("conClass").value || current.class;
   const s = document.getElementById("conSection").value || current.section;
   const examName = document.getElementById("conExamSel").value;
@@ -1414,9 +1431,9 @@ function downloadConsolidatedPDF() {
   const opt = {
     margin:       [0.15, 0.15, 0.15, 0.15],
     filename:     `Consolidated_Class_${c}${s}_${examName}.pdf`,
-    image:        { type: 'jpeg', quality: 0.98 },
+    image:        { type: "jpeg", quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'in', format: 'letter', orientation: 'landscape' }
+    jsPDF:        { unit: "in", format: "letter", orientation: "landscape" }
   };
 
   html2pdf().set(opt).from(element).save();
@@ -1586,13 +1603,17 @@ function renderReport() {
       let isStudentAB = resData.total === "AB";
       let isStudentFail = (resData.res === "Fail") || isStudentAB;
 
+      // Both S.No and Name highlight in soft red when student fails
+      const snoClass = isStudentFail ? "text-center sno-fail-highlight" : "text-center";
       const nameClass = isStudentFail ? "text-left student-fail-highlight" : "text-left";
+
+      // Pale yellow highlight for AB and its Grade Dash (-), soft red highlight for Failures
       const totalCellClass = isStudentAB ? "text-center cell-ab-highlight" : (isStudentFail ? "text-center cell-fail-highlight" : "text-center");
-      const gradeCellClass = isStudentFail ? "text-center cell-fail-highlight" : "text-center";
+      const gradeCellClass = isStudentAB ? "text-center cell-ab-highlight" : (isStudentFail ? "text-center cell-fail-highlight" : "text-center");
       const resultCellClass = isStudentFail ? "text-center cell-fail-highlight" : "text-center";
 
       const formatScoreVal = (v) => {
-        if (v === "AB") return `<span class="ab-text">AB</span>`;
+        if (v === "AB") return "AB";
         return (v !== "" && v !== undefined) ? v : "-";
       };
 
@@ -1603,7 +1624,7 @@ function renderReport() {
         : (resData.res ? `<span class="pass-text">${resData.res}</span>` : "-");
 
       return `<tr>
-        <td class="text-center">${i + 1}</td>
+        <td class="${snoClass}">${i + 1}</td>
         <td class="text-center" style="font-weight:600; color: #475569;">${escapeHtml(s.admissionNo || "-")}</td>
         <td class="${nameClass}">${escapeHtml(s.name)}</td>
         <td class="${getComponentCellClass(val.nbs)}">${formatScoreVal(val.nbs)}</td>
@@ -1642,9 +1663,13 @@ function renderReport() {
 
       let convertedText = isStudentAB ? "AB" : (score100 === "" ? "" : formatNum(score100));
 
+      // Both S.No and Name highlight in soft red when student fails
+      const snoClass = isStudentFail ? "text-center sno-fail-highlight" : "text-center";
       const nameClass = isStudentFail ? "text-left student-fail-highlight" : "text-left";
+
+      // Pale yellow highlight for AB and its Grade Dash (-), soft red highlight for Failures
       const markCellClass = isStudentAB ? "text-center cell-ab-highlight" : (isStudentFail ? "text-center cell-fail-highlight" : "text-center");
-      const gradeCellClass = isStudentFail ? "text-center cell-fail-highlight" : "text-center";
+      const gradeCellClass = isStudentAB ? "text-center cell-ab-highlight" : (isStudentFail ? "text-center cell-fail-highlight" : "text-center");
       const resultCellClass = isStudentFail ? "text-center cell-fail-highlight" : "text-center";
 
       let finalResultHtml = isStudentFail 
@@ -1652,7 +1677,7 @@ function renderReport() {
         : (res ? `<span class="pass-text">${res}</span>` : "-");
 
       return `<tr>
-        <td class="text-center">${i + 1}</td>
+        <td class="${snoClass}">${i + 1}</td>
         <td class="text-center" style="font-weight:600; color: #475569;">${escapeHtml(s.admissionNo || "-")}</td>
         <td class="${nameClass}">${escapeHtml(s.name)}</td>
         <td class="${markCellClass}">${rawStr === "AB" ? 'AB' : val}</td>
@@ -1696,15 +1721,15 @@ function renderReport() {
 }
 
 function downloadPDF() {
-  const element = document.getElementById('reportPage');
+  const element = document.getElementById("reportPage");
   if (!element) return alert("No report available to download.");
 
   const opt = {
     margin:       [0.3, 0.3, 0.3, 0.3],
     filename:     `Academic_Report_Class_${current.class}${current.section}.pdf`,
-    image:        { type: 'jpeg', quality: 0.98 },
+    image:        { type: "jpeg", quality: 0.98 },
     html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+    jsPDF:        { unit: "in", format: "letter", orientation: "portrait" }
   };
 
   html2pdf().set(opt).from(element).save();
@@ -1776,7 +1801,7 @@ function exportToPages() {
 }
 
 function exportToWord() {
-  const content = document.getElementById('reportPage');
+  const content = document.getElementById("reportPage");
   if (!content || !content.innerHTML.trim()) {
     return alert("Please generate the report preview first.");
   }
@@ -1797,6 +1822,7 @@ function exportToWord() {
         .pass-text { color: #10b981; font-weight: bold; }
         .fail-text, .ab-text { color: #ef4444; font-weight: bold; }
         .student-fail-highlight { background-color: #fee2e2 !important; color: #000000 !important; font-weight: bold; }
+        .sno-fail-highlight { background-color: #fee2e2 !important; color: #000000 !important; font-weight: bold; }
         .cell-fail-highlight { background-color: #fee2e2 !important; color: #dc2626 !important; font-weight: bold; }
         .cell-ab-highlight { background-color: #fef9c3 !important; color: #b45309 !important; font-weight: bold; }
       </style>
@@ -1809,9 +1835,9 @@ function exportToWord() {
     </html>
   `;
 
-  const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
+  const blob = new Blob(["\ufeff" + htmlContent], { type: "application/msword" });
   const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
   link.download = `Academic_Report_Class_${current.class}${current.section}.doc`;
   document.body.appendChild(link);
