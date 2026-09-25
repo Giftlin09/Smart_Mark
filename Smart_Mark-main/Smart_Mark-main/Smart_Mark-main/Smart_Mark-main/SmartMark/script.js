@@ -1610,6 +1610,7 @@ function renderReport() {
       // Pale yellow highlight for AB and its Grade Dash (-), soft red highlight for Failures
       const totalCellClass = isStudentAB ? "text-center cell-ab-highlight" : (isStudentFail ? "text-center cell-fail-highlight" : "text-center");
       const gradeCellClass = isStudentAB ? "text-center cell-ab-highlight" : (isStudentFail ? "text-center cell-fail-highlight" : "text-center");
+      const gradePointCellClass = isStudentAB ? "text-center cell-ab-highlight" : (isStudentFail ? "text-center cell-fail-highlight fail-mark-text" : "text-center");
       const resultCellClass = isStudentFail ? "text-center cell-fail-highlight" : "text-center";
 
       const formatScoreVal = (v) => {
@@ -1633,7 +1634,7 @@ function renderReport() {
         <td class="${getComponentCellClass(val.e)}">${formatScoreVal(val.e)}</td>
         <td class="${totalCellClass}"><b>${resData.totalStr === "AB" ? 'AB' : resData.totalStr}</b></td>
         <td class="${gradeCellClass}"><b>${resData.grade}</b></td>
-        <td class="text-center">${resData.gradePoint}</td>
+        <td class="${gradePointCellClass}"><b>${resData.gradePoint}</b></td>
         <td class="${resultCellClass}">${finalResultHtml}</td>
       </tr>`;
     }).join("");
@@ -1670,6 +1671,7 @@ function renderReport() {
       // Pale yellow highlight for AB and its Grade Dash (-), soft red highlight for Failures
       const markCellClass = isStudentAB ? "text-center cell-ab-highlight" : (isStudentFail ? "text-center cell-fail-highlight" : "text-center");
       const gradeCellClass = isStudentAB ? "text-center cell-ab-highlight" : (isStudentFail ? "text-center cell-fail-highlight" : "text-center");
+      const gradePointCellClass = isStudentAB ? "text-center cell-ab-highlight" : (isStudentFail ? "text-center cell-fail-highlight fail-mark-text" : "text-center");
       const resultCellClass = isStudentFail ? "text-center cell-fail-highlight" : "text-center";
 
       let finalResultHtml = isStudentFail 
@@ -1683,7 +1685,7 @@ function renderReport() {
         <td class="${markCellClass}">${rawStr === "AB" ? 'AB' : val}</td>
         <td class="${markCellClass}"><b>${convertedText}</b></td>
         <td class="${gradeCellClass}"><b>${grade}</b></td>
-        <td class="text-center">${gradePoint}</td>
+        <td class="${gradePointCellClass}"><b>${gradePoint}</b></td>
         <td class="${resultCellClass}">${finalResultHtml}</td>
       </tr>`;
     }).join("");
